@@ -30,15 +30,15 @@ The frontend of **Toh Zawa Sho** is built using **Next.js** and **ShadCN** to pr
 
 ### Prerequisites
 Ensure you have the following installed:
-- **Node.js** (>=16.0.0)
+- **Node.js** (>=18.0.0)
 - **npm** or **yarn**
 - **Git**
 
 ### Steps to Run the Project
 ```sh
 # Clone the repository
-git clone https://github.com/your-repo/digital-restaurant-menu-frontend.git
-cd digital-restaurant-menu-frontend
+git clone https://github.com/nabatech-bt/toh-zawa-sho-frontend.git
+cd toh-zawa-sho-frontend
 
 # Install dependencies
 npm install  # or yarn install
