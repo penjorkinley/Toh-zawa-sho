@@ -4,7 +4,6 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import NavLinks from "./nav-links/nav-links";
-import { landingNavLinks } from "@/lib/config/nav-links";
 import NavLink from "./nav-links/nav-link";
 
 export default function LandingHeader() {
@@ -75,20 +74,21 @@ export default function LandingHeader() {
           </button>
 
           <nav className="flex flex-col mt-12 space-y-4">
-            {landingNavLinks.map((link) => (
-              <NavLink
-                key={link.href}
-                href={link.href}
-                onClick={() => setIsMenuOpen(false)}
-                className={`${
-                  link.text === "Business Owners"
-                    ? `${link.className}`
-                    : link.className
-                } w-full text-left px-4 py-2`}
-              >
-                {link.text}
-              </NavLink>
-            ))}
+            <NavLink href="/about" className="text-left px-4 py-2">
+              About
+            </NavLink>
+            <NavLink href="/restaurants" className="text-left px-4 py-2">
+              Restaurants
+            </NavLink>
+            <NavLink href="/contact" className="text-left px-4 py-2">
+              Contact
+            </NavLink>
+            <NavLink
+              href="#"
+              className="bg-primary w-full text-left px-4 py-2 rounded-md text-white transition-transform duration-300 transform-cpu hover:scale-105"
+            >
+              Business Owners
+            </NavLink>
           </nav>
         </div>
       </div>
