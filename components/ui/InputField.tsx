@@ -4,6 +4,7 @@ interface InputFieldProps {
   type: string;
   placeholder: string;
   label: string;
+  name: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   className?: string;
@@ -13,6 +14,7 @@ export default function InputField({
   type,
   placeholder,
   label,
+  name,
   value,
   onChange,
   className,
@@ -28,6 +30,7 @@ export default function InputField({
             type === "password" ? (showPassword ? "text" : "password") : type
           }
           placeholder={placeholder}
+          name={name}
           value={value}
           onChange={onChange}
           className="w-full px-4 py-3 rounded-lg border border-text/40 focus:outline-none focus:border-primary text-text font-normal placeholder-text/50 pr-10"

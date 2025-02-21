@@ -8,11 +8,21 @@ import Button from "../../../components/ui/Button";
 import Link from "next/link";
 
 export default function LoginPage() {
-  const [emailOrPhone, setEmailOrPhone] = useState("");
-  const [password, setPassword] = useState("");
+  const [formData, setFormData] = useState({
+    emailOrPhone: "",
+    password: "",
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
 
   const handleLogin = () => {
-    console.log("Logged in");
+    console.log("Form Data:", formData);
   };
 
   return (
@@ -26,15 +36,17 @@ export default function LoginPage() {
             type="text"
             placeholder="Enter Email or Phone no."
             label="Email / Phone No."
-            value={emailOrPhone}
-            onChange={(e) => setEmailOrPhone(e.target.value)}
+            name="emailOrPhone"
+            value={formData.emailOrPhone}
+            onChange={handleChange}
           />
           <InputField
             type="password"
             placeholder="Enter Password"
             label="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            name="password" // Add the name prop
+            value={formData.password}
+            onChange={handleChange}
           />
           <Link
             href="/forgot-password"
