@@ -18,6 +18,8 @@ export default {
       colors: {
         primary: "#C78853",
         screen: "#FBFEF9",
+        buttonText: "#FCFAF9",
+        text: "#040403",
       },
     },
   },
