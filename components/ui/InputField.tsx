@@ -2,10 +2,10 @@ import { useState } from "react";
 
 interface InputFieldProps {
   type: string;
-  placeholder: string;
+  placeholder?: string;
   label: string;
   name: string;
-  value: string;
+  value?: string | number | readonly string[] | undefined;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   className?: string;
 }
@@ -29,9 +29,9 @@ export default function InputField({
           type={
             type === "password" ? (showPassword ? "text" : "password") : type
           }
-          placeholder={placeholder}
+          placeholder={type !== "file" ? placeholder : undefined}
           name={name}
-          value={value}
+          value={type !== "file" ? value || "" : undefined}
           onChange={onChange}
           className="w-full px-4 py-3 rounded-lg border border-text/40 focus:outline-none focus:border-primary text-text font-normal placeholder-text/50 pr-10"
         />
