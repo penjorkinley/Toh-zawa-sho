@@ -8,7 +8,7 @@ interface AuthLayoutProps {
 
 export default function AuthLayout({ children }: AuthLayoutProps) {
   return (
-    <div className="min-h-screen w-full bg-gray-50 relative">
+    <div className="min-h-screen w-full relative">
       {/* Image Section */}
       <div className="h-[40vh] w-full relative">
         <Image
@@ -23,9 +23,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
       {/* Form Section - Overlayed */}
       <div className="absolute w-full top-[35vh] bottom-0">
         <div className="w-full max-w-md mx-auto h-full">
-          <div className="bg-white rounded-t-3xl shadow-lg px-6 py-8 h-full">
-            {children}
-          </div>
+          <div className="bg-white rounded-t-3xl px-6 py-8">{children}</div>
         </div>
       </div>
     </div>
