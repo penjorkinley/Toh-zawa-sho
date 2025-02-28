@@ -7,7 +7,7 @@ export default function NavLinks() {
       <NavLink href="/restaurants">Restaurants</NavLink>
       <NavLink href="/contact">Contact</NavLink>
       <NavLink
-        href="#"
+        href="/signup"
         className="bg-primary w-auto h-full rounded-md text-white transition-transform duration-300 transform-cpu hover:scale-105"
       >
         Business Owners

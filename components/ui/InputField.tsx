@@ -8,6 +8,7 @@ interface InputFieldProps {
   value?: string | number | readonly string[] | undefined;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   className?: string;
+  error?: string | null;
 }
 
 export default function InputField({
@@ -17,13 +18,16 @@ export default function InputField({
   name,
   value,
   onChange,
-  className,
+  className = "",
+  error,
 }: InputFieldProps) {
   const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <div className={`mb-4 ${className}`}>
-      <label className="text-text font-normal block mb-2">{label}</label>
+    <div className={`mb-5 sm:mb-6 ${className}`}>
+      <label className="text-text font-normal block mb-2 sm:mb-3 text-sm sm:text-base">
+        {label}
+      </label>
       <div className="relative">
         <input
           type={
@@ -33,19 +37,23 @@ export default function InputField({
           name={name}
           value={type !== "file" ? value || "" : undefined}
           onChange={onChange}
-          className="w-full px-4 py-3 rounded-lg border border-text/40 focus:outline-none focus:border-primary text-text font-normal placeholder-text/50 pr-10"
+          className={`w-full px-4 sm:px-5 py-3 sm:py-3.5 rounded-lg border text-sm sm:text-base border-text/40 focus:outline-none focus:border-primary text-text font-normal placeholder-text/50 pr-10 ${
+            error
+              ? "border-red-500 focus:ring-red-500/20"
+              : "border-text/40 focus:border-primary"
+          }`}
         />
         {type === "password" && (
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-text/40 hover:text-text/60 focus:outline-none"
+            className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 text-text/40 hover:text-text/60 focus:outline-none"
           >
             {showPassword ? (
               // Open eye icon
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
+                className="h-5 w-5 sm:h-6 sm:w-6"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -67,7 +75,7 @@ export default function InputField({
               // Closed eye icon
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
+                className="h-5 w-5 sm:h-6 sm:w-6"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -83,6 +91,7 @@ export default function InputField({
           </button>
         )}
       </div>
+      {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
     </div>
   );
 }
