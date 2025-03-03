@@ -2,12 +2,12 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import * as z from "zod";
-import { firstStepSchema } from "@/lib/validations/signup";
+import { firstStepSchema } from "@/lib/validations/auth/signup";
 import AuthLayout from "@/components/auth/AuthLayout";
 import FormContainer from "@/components/auth/FormContainer";
 import InputField from "@/components/ui/InputField";
 import Button from "@/components/ui/Button";
-import type { SignupFormData } from "@/lib/validations/signup";
+import type { SignupFormData } from "@/lib/validations/auth/signup";
 
 interface FirstStepSignupProps {
   formData: SignupFormData;
@@ -31,9 +31,15 @@ export default function FirstStepSignup({
   const validateForm = () => {
     try {
       // Only validate the fields in step 1
-      const { businessName, email, phoneNumber, password, confirmPassword } = formData;
-      const step1Data = { businessName, email, phoneNumber, password, confirmPassword };
-      console.log("Validating data:", step1Data);
+      const { businessName, email, phoneNumber, password, confirmPassword } =
+        formData;
+      const step1Data = {
+        businessName,
+        email,
+        phoneNumber,
+        password,
+        confirmPassword,
+      };
       firstStepSchema.parse(step1Data);
       setErrors({});
       return true;
@@ -55,10 +61,7 @@ export default function FirstStepSignup({
   };
 
   const handleNextWithValidation = () => {
-    console.log("Starting form validation...");
-    console.log("Current form data:", formData);
     if (validateForm()) {
-      console.log("Form validation passed, moving to next step");
       handleNext();
     } else {
       console.log("Form validation failed with errors:", errors);

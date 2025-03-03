@@ -9,7 +9,7 @@ import {
   slideTransition,
   useStepNavigation,
 } from "@/lib/framer-motion/utils";
-import type { SignupFormData } from "@/lib/validations/signup";
+import type { SignupFormData } from "@/lib/validations/auth/signup";
 
 export default function SignupPage() {
   const [step, setStep] = useState(1);
@@ -36,11 +36,6 @@ export default function SignupPage() {
         ...prevData,
         [name]: file,
       }));
-      console.log("File selected:", {
-        name: file.name,
-        type: file.type,
-        size: file.size,
-      });
     } else {
       const { value } = e.target;
       setFormData((prevData) => ({
@@ -53,16 +48,6 @@ export default function SignupPage() {
   const handleSubmit = () => {
     startTransition(() => {
       try {
-        console.log("Form Data:", {
-          ...formData,
-          licenseFile: formData.licenseFile
-            ? {
-                name: formData.licenseFile.name,
-                type: formData.licenseFile.type,
-                size: formData.licenseFile.size,
-              }
-            : null,
-        });
         // todo: signup helper function here so it sends data to server.
         console.log("Form submitted successfully!");
         setError(null);
