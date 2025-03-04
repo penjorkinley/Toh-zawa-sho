@@ -6,9 +6,9 @@ interface InputFieldProps {
   label: string;
   name: string;
   value?: string | number | readonly string[] | undefined;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   className?: string;
-  error?: string | null;
+  error?: string | string[] | null;
 }
 
 export default function InputField({
@@ -35,7 +35,7 @@ export default function InputField({
           }
           placeholder={type !== "file" ? placeholder : undefined}
           name={name}
-          value={type !== "file" ? value || "" : undefined}
+          defaultValue={type !== "file" ? value || "" : undefined}
           onChange={onChange}
           className={`w-full px-4 sm:px-5 py-3 sm:py-3.5 rounded-lg border text-sm sm:text-base border-text/40 focus:outline-none focus:border-primary text-text font-normal placeholder-text/50 pr-10 ${
             error
