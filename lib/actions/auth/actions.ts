@@ -58,7 +58,7 @@ export async function verifyOtpAction(
   prevState: { success?: boolean; errors?: Record<string, string[]> },
   formData: FormData
 ) {
-  const otp = formData.get("otp") as string;
+  const otp = formData.get("otp");
   const contact = formData.get("contact") as string;
 
   // Validate only the OTP as per your schema
@@ -102,9 +102,9 @@ export async function resetPasswordAction(
   prevState: { success?: boolean; errors?: Record<string, string[]> },
   formData: FormData
 ) {
-  const password = formData.get("password") as string;
-  const confirmPassword = formData.get("confirmPassword") as string;
-  const contact = formData.get("contact") as string;
+  const password = formData.get("password");
+  const confirmPassword = formData.get("confirmPassword");
+  const contact = formData.get("contact");
 
   const validationResult = resetPasswordSchema.safeParse({
     password,
