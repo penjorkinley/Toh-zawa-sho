@@ -1,9 +1,9 @@
 "use client";
 
-import AuthLayout from "../../../components/auth/AuthLayout";
-import FormContainer from "../../../components/auth/FormContainer";
-import InputField from "../../../components/ui/InputField";
-import Button from "../../../components/ui/Button";
+import AuthLayout from "@/components/auth/AuthLayout";
+import FormContainer from "@/components/auth/FormContainer";
+import InputField from "@/components/ui/InputField";
+import Button from "@/components/ui/Button";
 import Link from "next/link";
 import { useActionState } from "react";
 import { loginAction } from "@/lib/actions/auth/actions";

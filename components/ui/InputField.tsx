@@ -25,7 +25,7 @@ export default function InputField({
 
   return (
     <div className={`mb-5 sm:mb-6 ${className}`}>
-      <label className="text-text font-normal block mb-2 sm:mb-3 text-sm sm:text-base">
+      <label className="text-text font-normal block mb-2 sm:mb-3 ">
         {label}
       </label>
       <div className="relative">
@@ -37,7 +37,7 @@ export default function InputField({
           name={name}
           defaultValue={type !== "file" ? value || "" : undefined}
           onChange={onChange}
-          className={`w-full px-4 sm:px-5 py-3 sm:py-3.5 rounded-lg border text-sm sm:text-base border-text/40 focus:outline-none focus:border-primary text-text font-normal placeholder-text/50 pr-10 ${
+          className={`w-full px-4 sm:px-5 py-3 sm:py-3.5 rounded-lg border  border-text/40 focus:outline-none focus:border-primary text-text font-normal placeholder-text/50 pr-10 ${
             error
               ? "border-red-500 focus:ring-red-500/20"
               : "border-text/40 focus:border-primary"
