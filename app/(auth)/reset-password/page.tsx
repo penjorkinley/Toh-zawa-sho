@@ -2,10 +2,10 @@
 
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import FormContainer from "../../../components/auth/FormContainer";
-import InputField from "../../../components/ui/InputField";
-import Button from "../../../components/ui/Button";
-import BackButton from "../../../components/ui/BackButton";
+import FormContainer from "@/components/auth/FormContainer";
+import InputField from "@/components/ui/InputField";
+import Button from "@/components/ui/Button";
+import BackButton from "@/components/ui/BackButton";
 import Image from "next/image";
 import { useActionState } from "react";
 import { resetPasswordAction } from "@/lib/actions/auth/actions";

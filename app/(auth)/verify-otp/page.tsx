@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import FormContainer from "../../../components/auth/FormContainer";
-import Button from "../../../components/ui/Button";
-import BackButton from "../../../components/ui/BackButton";
+import FormContainer from "@/components/auth/FormContainer";
+import Button from "@/components/ui/Button";
+import BackButton from "@/components/ui/BackButton";
 import Link from "next/link";
 import Image from "next/image";
 import { useActionState } from "react";
@@ -73,7 +73,7 @@ export default function VerifyOTPPage() {
     if (value && index === 3 && newOtpCode.every((digit) => digit)) {
       setTimeout(() => {
         formRef.current?.requestSubmit();
-      }, 300);
+      }, 500);
     }
   };
 

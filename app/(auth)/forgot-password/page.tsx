@@ -3,10 +3,10 @@
 import { useActionState } from "react";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import FormContainer from "../../../components/auth/FormContainer";
-import InputField from "../../../components/ui/InputField";
-import Button from "../../../components/ui/Button";
-import BackButton from "../../../components/ui/BackButton";
+import FormContainer from "@/components/auth/FormContainer";
+import InputField from "@/components/ui/InputField";
+import Button from "@/components/ui/Button";
+import BackButton from "@/components/ui/BackButton";
 import Link from "next/link";
 import Image from "next/image";
 import { forgotPasswordAction } from "@/lib/actions/auth/actions";
