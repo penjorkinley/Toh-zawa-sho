@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import animate from "tailwindcss-animate";
 
 export default {
   darkMode: ["class"],
@@ -9,19 +10,29 @@ export default {
   ],
   theme: {
     extend: {
-      // Pull in the custom font variable from layout.tsx
       fontFamily: {
-        // If you want a named key, e.g. "sans" or "poppins"
         poppins: ["var(--font-poppins)"],
       },
-      // Only keep the colors you need
       colors: {
         primary: "#C78853",
         screen: "#FBFEF9",
         buttonText: "#FCFAF9",
         text: "#040403",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        border: "hsl(var(--border))",
+        sidebar: {
+          DEFAULT: "hsl(var(--sidebar-background))",
+          foreground: "hsl(var(--sidebar-foreground))",
+          primary: "hsl(var(--sidebar-primary))",
+          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
+          accent: "hsl(var(--sidebar-accent))",
+          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
+          border: "hsl(var(--sidebar-border))",
+          ring: "hsl(var(--sidebar-ring))",
+        },
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [animate],
 } satisfies Config;
