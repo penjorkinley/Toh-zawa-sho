@@ -13,7 +13,9 @@ export default function LocationInput({
 }: LocationInputProps) {
   return (
     <div>
-      <label className="text-text font-normal block mb-2">Location</label>
+      <label className="text-text font-normal block mb-2 md:mb-3">
+        Location
+      </label>
       <input
         type="text"
         name="location"
@@ -25,11 +27,11 @@ export default function LocationInput({
         }`}
       />
 
-      <div className="flex mt-2">
-        <div className="flex-grow mr-1">{/* Empty div for sizing */}</div>
+      {/* Responsive button layout */}
+      <div className="flex mt-2 justify-end sm:mt-3">
         <button
           type="button"
-          className="bg-white border border-gray-300 rounded-md px-3 py-2 flex items-center gap-2"
+          className="bg-white border border-gray-300 rounded-md px-3 py-2 md:px-4 md:py-2.5 flex items-center gap-2 hover:bg-gray-50 transition-colors"
           onClick={onMapClick}
         >
           <svg
@@ -47,7 +49,7 @@ export default function LocationInput({
             <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
             <circle cx="12" cy="10" r="3" />
           </svg>
-          <span className="text-[#e07c35]">Locate on Map</span>
+          <span className="text-[#e07c35] md:text-base">Locate on Map</span>
         </button>
       </div>
 

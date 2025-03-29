@@ -55,9 +55,9 @@ export default function ImageUploader({
   };
 
   return (
-    <div className="relative mb-16">
+    <div className="relative">
       {/* Cover Photo */}
-      <div className="relative w-full h-48 bg-gray-100 rounded-md overflow-hidden">
+      <div className="relative w-full h-48 sm:h-56 md:h-64 lg:h-80 bg-gray-100 rounded-md md:rounded-lg overflow-hidden shadow-sm">
         {coverPreviewUrl ? (
           <Image
             src={coverPreviewUrl}
@@ -70,7 +70,7 @@ export default function ImageUploader({
             <button
               type="button"
               onClick={triggerCoverPhotoInput}
-              className="flex items-center gap-2 bg-white px-4 py-2 rounded-md shadow-sm"
+              className="flex items-center gap-2 bg-white px-4 py-2 rounded-md shadow-sm hover:bg-gray-50 transition-colors"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -106,7 +106,7 @@ export default function ImageUploader({
           <button
             type="button"
             onClick={triggerCoverPhotoInput}
-            className="absolute top-2 right-2 bg-white p-1 rounded-md shadow-sm"
+            className="absolute top-2 right-2 bg-white p-1 rounded-md shadow-sm hover:bg-gray-50 transition-colors"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -128,8 +128,8 @@ export default function ImageUploader({
       </div>
 
       {/* Logo - Overlapping the cover photo */}
-      <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2">
-        <div className="relative w-24 h-24 bg-gray-100 rounded-full overflow-hidden border-4 border-white">
+      <div className="absolute -bottom-12 sm:-bottom-14 left-1/2 transform -translate-x-1/2">
+        <div className="relative w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 bg-gray-100 rounded-full overflow-hidden border-4 border-white shadow-md">
           {logoPreviewUrl ? (
             <Image
               src={logoPreviewUrl}
@@ -149,7 +149,7 @@ export default function ImageUploader({
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="lucide lucide-package"
+                className="lucide lucide-package sm:w-7 sm:h-7 md:w-8 md:h-8"
               >
                 <path d="m16.5 9.4-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
                 <path d="m3.29 7 8.5 4.5L21 8M12 22V12" />
@@ -168,7 +168,7 @@ export default function ImageUploader({
           <button
             type="button"
             onClick={triggerLogoInput}
-            className="absolute bottom-0 right-0 bg-white p-1 rounded-full shadow-sm"
+            className="absolute bottom-0 right-0 bg-white p-1 sm:p-1.5 rounded-full shadow-sm hover:bg-gray-50 transition-colors"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -180,7 +180,7 @@ export default function ImageUploader({
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="lucide lucide-pencil"
+              className="lucide lucide-pencil sm:w-5 sm:h-5"
             >
               <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
               <path d="m15 5 4 4" />

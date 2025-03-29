@@ -25,16 +25,18 @@ export default function OpeningDaysSelector({
 
   return (
     <div>
-      <label className="text-text font-normal block mb-2">Opening Days</label>
+      <label className="text-text font-normal block mb-2 md:mb-3">
+        Opening Days
+      </label>
 
-      {/* Preset buttons */}
-      <div className="flex flex-wrap gap-2 mb-3">
+      {/* Preset buttons with improved spacing */}
+      <div className="flex flex-wrap gap-2 mb-3 md:mb-4">
         <button
           type="button"
-          className={`px-3 py-1.5 rounded-full border text-sm ${
+          className={`px-3 py-1.5 rounded-full border text-sm md:text-base md:px-4 md:py-2 transition-colors ${
             isAllSelected
               ? "bg-primary/10 border-primary text-primary"
-              : "bg-white border-gray-300 text-gray-700"
+              : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
           }`}
           onClick={() => onPresetSelect("all")}
         >
@@ -42,10 +44,10 @@ export default function OpeningDaysSelector({
         </button>
         <button
           type="button"
-          className={`px-3 py-1.5 rounded-full border text-sm ${
+          className={`px-3 py-1.5 rounded-full border text-sm md:text-base md:px-4 md:py-2 transition-colors ${
             isWeekdaysSelected
               ? "bg-primary/10 border-primary text-primary"
-              : "bg-white border-gray-300 text-gray-700"
+              : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
           }`}
           onClick={() => onPresetSelect("weekdays")}
         >
@@ -53,10 +55,10 @@ export default function OpeningDaysSelector({
         </button>
         <button
           type="button"
-          className={`px-3 py-1.5 rounded-full border text-sm ${
+          className={`px-3 py-1.5 rounded-full border text-sm md:text-base md:px-4 md:py-2 transition-colors ${
             isWeekendsSelected
               ? "bg-primary/10 border-primary text-primary"
-              : "bg-white border-gray-300 text-gray-700"
+              : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
           }`}
           onClick={() => onPresetSelect("weekends")}
         >
@@ -64,16 +66,16 @@ export default function OpeningDaysSelector({
         </button>
       </div>
 
-      {/* Individual day buttons */}
-      <div className="flex flex-wrap gap-2">
+      {/* Individual day buttons with responsive sizing */}
+      <div className="flex flex-wrap gap-2 md:gap-3">
         {daysOfWeek.map((day) => (
           <button
             key={day}
             type="button"
-            className={`px-3 py-1.5 rounded-full border text-sm ${
+            className={`px-3 py-1.5 rounded-full border text-sm md:text-base md:px-4 md:py-2 transition-colors ${
               selectedDays.includes(day)
                 ? "bg-primary/10 border-primary text-primary"
-                : "bg-white border-gray-300 text-gray-700"
+                : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
             }`}
             onClick={() => onChange(day)}
           >

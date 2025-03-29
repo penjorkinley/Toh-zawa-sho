@@ -1,6 +1,6 @@
 "use server";
 
-import { businessSetupSchema } from "../../validations/business/setup";
+import { businessSetupSchema } from "../../validations/information-setup/setup";
 
 export async function setupBusinessAction(prevState: any, formData: FormData) {
   try {
