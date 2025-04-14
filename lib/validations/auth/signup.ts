@@ -1,9 +1,6 @@
 import * as z from "zod";
 
 const baseSignupSchema = z.object({
-  businessName: z
-    .string()
-    .min(2, "Business name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
   phoneNumber: z.string().min(8, "Phone number must be at least 8 digits"),
   password: z
@@ -19,7 +16,6 @@ const baseSignupSchema = z.object({
 
 export const firstStepSchema = baseSignupSchema
   .pick({
-    businessName: true,
     email: true,
     phoneNumber: true,
     password: true,

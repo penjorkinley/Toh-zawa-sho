@@ -31,10 +31,8 @@ export default function FirstStepSignup({
   const validateForm = () => {
     try {
       // Only validate the fields in step 1
-      const { businessName, email, phoneNumber, password, confirmPassword } =
-        formData;
+      const { email, phoneNumber, password, confirmPassword } = formData;
       const step1Data = {
-        businessName,
         email,
         phoneNumber,
         password,
@@ -50,11 +48,9 @@ export default function FirstStepSignup({
           if (err.path) {
             const fieldName = err.path[0].toString();
             newErrors[fieldName] = err.message;
-            console.log(`Validation error for ${fieldName}:`, err.message);
           }
         });
         setErrors(newErrors);
-        console.log("All validation errors:", newErrors);
       }
       return false;
     }
@@ -63,8 +59,6 @@ export default function FirstStepSignup({
   const handleNextWithValidation = () => {
     if (validateForm()) {
       handleNext();
-    } else {
-      console.log("Form validation failed with errors:", errors);
     }
   };
 
@@ -84,65 +78,69 @@ export default function FirstStepSignup({
           title="Joenpa Lekso!"
           subtitle="Join us to start using our services."
         >
-          <InputField
-            type="text"
-            placeholder="Enter Business Name"
-            label="Business Name"
-            name="businessName"
-            value={formData.businessName}
-            onChange={handleChange}
-            error={errors.businessName}
-            className={errors.businessName ? "border-red-500" : ""}
-          />
-          <InputField
-            type="email"
-            placeholder="Enter Email"
-            label="Email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            error={errors.email}
-            className={errors.email ? "border-red-500" : ""}
-          />
-          <InputField
-            type="text"
-            placeholder="Enter Phone Number"
-            label="Phone Number"
-            name="phoneNumber"
-            value={formData.phoneNumber}
-            onChange={handleChange}
-            error={errors.phoneNumber}
-            className={errors.phoneNumber ? "border-red-500" : ""}
-          />
-          <InputField
-            type="password"
-            placeholder="Enter Password"
-            label="Password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            error={errors.password}
-            className={errors.password ? "border-red-500" : ""}
-          />
-          <InputField
-            type="password"
-            placeholder="Enter Password Again"
-            label="Confirm Password"
-            name="confirmPassword"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            error={errors.confirmPassword}
-            className={errors.confirmPassword ? "border-red-500" : ""}
-          />
-          <Button onClick={handleNextWithValidation} className="mt-4">
-            Next
-          </Button>
-          <p className="text-center text-sm mt-4 text-text">
-            Already have an account?{" "}
-            <Link href="/login" className="text-primary">
-              Log In
-            </Link>
-          </p>
+          <div className="w-full">
+            <InputField
+              type="email"
+              placeholder="Enter Email"
+              label="Email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              error={errors.email}
+              className={`mb-4 lg:mb-5 ${errors.email ? "border-red-500" : ""}`}
+            />
+            <InputField
+              type="text"
+              placeholder="Enter Phone Number"
+              label="Phone Number"
+              name="phoneNumber"
+              value={formData.phoneNumber}
+              onChange={handleChange}
+              error={errors.phoneNumber}
+              className={`mb-4 lg:mb-5 ${
+                errors.phoneNumber ? "border-red-500" : ""
+              }`}
+            />
+            <InputField
+              type="password"
+              placeholder="Enter Password"
+              label="Password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              error={errors.password}
+              className={`mb-4 lg:mb-5 ${
+                errors.password ? "border-red-500" : ""
+              }`}
+            />
+            <InputField
+              type="password"
+              placeholder="Enter Password Again"
+              label="Confirm Password"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              error={errors.confirmPassword}
+              className={`mb-4 lg:mb-5 ${
+                errors.confirmPassword ? "border-red-500" : ""
+              }`}
+            />
+            <Button
+              onClick={handleNextWithValidation}
+              className="w-full py-3 lg:py-4 mt-2 text-base font-medium transition-all duration-300 hover:shadow-lg"
+            >
+              Next
+            </Button>
+            <p className="text-center text-sm lg:text-base mt-6 lg:mt-8 mb-4 lg:mb-6 text-text">
+              Already have an account?{" "}
+              <Link
+                href="/login"
+                className="text-primary font-medium hover:underline transition-colors duration-200"
+              >
+                Log In
+              </Link>
+            </p>
+          </div>
         </FormContainer>
       </AuthLayout>
     </motion.div>

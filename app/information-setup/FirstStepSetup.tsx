@@ -48,6 +48,12 @@ export default function FirstStepSetup({
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
+    if (!formData.businessName.trim()) {
+      newErrors.businessName = "Business name is required";
+    } else if (formData.businessName.length < 2) {
+      newErrors.businessName = "Business name must be at least 2 characters";
+    }
+
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
     } else if (!/^\S+@\S+\.\S+$/.test(formData.email)) {
@@ -115,16 +121,26 @@ export default function FirstStepSetup({
                 onLogoChange={handleLogoChange}
               />
 
-              {/* Business Name heading below the image uploader */}
-              <h2 className="text-lg font-medium text-center mt-20 mb-6 md:text-xl lg:text-2xl">
-                Business Name
-              </h2>
+              {/* Adding spacing to balance the layout */}
+              <div className="mt-24 md:mt-20"></div>
             </div>
           </div>
 
           {/* Right column with form fields on md+ screens */}
           <div className="md:w-1/2 lg:w-3/5 md:mt-0">
             <div className="space-y-4 md:space-y-6 lg:space-y-8 md:mt-0 md:p-6 lg:p-8 md:bg-gray-50 md:rounded-xl">
+              {/* Business Name input field - newly added */}
+              <InputField
+                type="text"
+                placeholder="Enter your business name"
+                label="Business Name"
+                name="businessName"
+                value={formData.businessName}
+                onChange={handleChange}
+                error={errors.businessName}
+                className="lg:col-span-2"
+              />
+
               <div className="md:grid md:grid-cols-1 lg:grid-cols-2 md:gap-6 lg:gap-8">
                 <InputField
                   type="email"
