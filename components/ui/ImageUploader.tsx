@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 
 interface ImageUploaderProps {
@@ -18,6 +18,16 @@ export default function ImageUploader({
   coverPhotoPreview = null,
   logoPreview = null,
 }: ImageUploaderProps) {
+  // Track if URLs were created locally to manage cleanup correctly
+  const locallyCreatedUrls = useRef<{
+    cover: boolean;
+    logo: boolean;
+  }>({
+    cover: false,
+    logo: false,
+  });
+
+  // Memoize the preview URLs to prevent unnecessary recreations
   const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(
     coverPhotoPreview
   );
@@ -25,14 +35,49 @@ export default function ImageUploader({
     logoPreview
   );
 
+  // Generate URLs only when needed (file exists but URL doesn't)
+  useEffect(() => {
+    // Handle cover photo URL
+    if (coverPhoto && !coverPreviewUrl) {
+      const imageUrl = URL.createObjectURL(coverPhoto);
+      setCoverPreviewUrl(imageUrl);
+      locallyCreatedUrls.current.cover = true;
+    }
+
+    // Handle logo URL
+    if (logo && !logoPreviewUrl) {
+      const imageUrl = URL.createObjectURL(logo);
+      setLogoPreviewUrl(imageUrl);
+      locallyCreatedUrls.current.logo = true;
+    }
+
+    // Cleanup function
+    return () => {
+      // Only revoke URLs we created locally (not ones passed as props)
+      if (coverPreviewUrl && locallyCreatedUrls.current.cover) {
+        URL.revokeObjectURL(coverPreviewUrl);
+      }
+      if (logoPreviewUrl && locallyCreatedUrls.current.logo) {
+        URL.revokeObjectURL(logoPreviewUrl);
+      }
+    };
+  }, [coverPhoto, logo, coverPreviewUrl, logoPreviewUrl]);
+
   const coverPhotoInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   const handleCoverPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+
+      // Revoke previous URL if it was created locally
+      if (coverPreviewUrl && locallyCreatedUrls.current.cover) {
+        URL.revokeObjectURL(coverPreviewUrl);
+      }
+
       const imageUrl = URL.createObjectURL(file);
       setCoverPreviewUrl(imageUrl);
+      locallyCreatedUrls.current.cover = true;
       onCoverPhotoChange(file);
     }
   };
@@ -40,8 +85,15 @@ export default function ImageUploader({
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+
+      // Revoke previous URL if it was created locally
+      if (logoPreviewUrl && locallyCreatedUrls.current.logo) {
+        URL.revokeObjectURL(logoPreviewUrl);
+      }
+
       const imageUrl = URL.createObjectURL(file);
       setLogoPreviewUrl(imageUrl);
+      locallyCreatedUrls.current.logo = true;
       onLogoChange(file);
     }
   };
@@ -165,27 +217,32 @@ export default function ImageUploader({
             className="hidden"
             onChange={handleLogoChange}
           />
-          <button
-            type="button"
-            onClick={triggerLogoInput}
-            className="absolute bottom-0 right-0 bg-white p-1 sm:p-1.5 rounded-full shadow-sm hover:bg-gray-50 transition-colors"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="lucide lucide-pencil sm:w-5 sm:h-5"
+
+          {/* Enhanced Edit Button for Logo - Hover Overlay Only */}
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black bg-opacity-40 rounded-full">
+            <button
+              type="button"
+              onClick={triggerLogoInput}
+              className="bg-primary text-white px-3 py-1.5 rounded-full shadow-md hover:bg-primary/90 transition-colors flex items-center gap-1.5"
             >
-              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-              <path d="m15 5 4 4" />
-            </svg>
-          </button>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="lucide lucide-pencil"
+              >
+                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                <path d="m15 5 4 4" />
+              </svg>
+              Edit
+            </button>
+          </div>
         </div>
       </div>
     </div>

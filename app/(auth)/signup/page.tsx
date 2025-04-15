@@ -17,7 +17,6 @@ export default function SignupPage() {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState<SignupFormData>({
-    businessName: "",
     email: "",
     phoneNumber: "",
     password: "",
