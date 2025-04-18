@@ -37,7 +37,7 @@ export default function InputField({
           name={name}
           defaultValue={type !== "file" ? value || "" : undefined}
           onChange={onChange}
-          className={`w-full px-4 sm:px-5 py-3 sm:py-3.5 rounded-lg border  border-text/40 focus:outline-none focus:border-primary text-text font-normal placeholder-text/50 pr-10 ${
+          className={`w-full px-4 sm:px-5 py-3 sm:py-3.5 rounded-lg border bg-[#FBFEF9] border-text/40 focus:outline-none focus:border-primary text-text font-normal placeholder-text/50 pr-10 ${
             error
               ? "border-red-500 focus:ring-red-500/20"
               : "border-text/40 focus:border-primary"
