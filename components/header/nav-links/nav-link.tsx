@@ -10,16 +10,38 @@ type Props = {
   onClick?: () => void;
 };
 
-export default function NavLink({ href, children, className, onClick }: Props) {
+export default function NavLink({
+  href,
+  children,
+  className = "",
+  onClick,
+}: Props) {
   const path = usePathname();
+  const isActive = path.startsWith(href);
+
+  // Base styles for all links
+  const baseClasses =
+    "text-base font-medium transition-all duration-200 ease-in-out";
+
+  // Special styles for business owners button
+  const isButton = href === "/login";
+
   return (
     <Link
       href={href}
-      className={
-        path.startsWith(href)
-          ? `${className} border-b-[3px] border-primary text-[20px] min-h-8 font-medium flex items-center justify-center transition-all duration-200 ease-in-out`
-          : `${className} text-[#040403] text-[20px] min-h-8 font-medium flex items-center justify-center transition-all duration-200 ease-in-out`
-      }
+      className={`
+        ${baseClasses}
+        ${
+          isButton
+            ? "bg-primary text-white px-4 py-2 rounded-md hover:shadow-md hover:translate-y-[-2px]"
+            : `relative px-3 py-2 ${
+                isActive
+                  ? "text-primary font-semibold"
+                  : "text-[#040403] hover:text-primary"
+              }`
+        }
+        ${className}
+      `}
       onClick={onClick}
     >
       {children}
