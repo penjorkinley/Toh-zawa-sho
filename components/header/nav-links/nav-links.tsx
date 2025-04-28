@@ -1,14 +1,38 @@
 import NavLink from "./nav-link";
 
-export default function NavLinks() {
+interface NavLinksProps {
+  orientation?: "horizontal" | "vertical";
+  className?: string;
+  onLinkClick?: () => void;
+}
+
+export default function NavLinks({
+  orientation = "horizontal",
+  className = "",
+  onLinkClick,
+}: NavLinksProps) {
   return (
-    <nav className="h-[50px] w-[705px] grid gap-3 grid-flow-col items-center">
-      <NavLink href="/about">About</NavLink>
-      <NavLink href="/restaurants">Restaurants</NavLink>
-      <NavLink href="/contact">Contact</NavLink>
+    <nav
+      className={`flex ${
+        orientation === "horizontal" ? "flex-row items-center" : "flex-col"
+      } gap-4 ${className}`}
+    >
+      <NavLink href="/about" onClick={onLinkClick}>
+        About
+      </NavLink>
+
+      <NavLink href="/restaurants" onClick={onLinkClick}>
+        Restaurants
+      </NavLink>
+
+      <NavLink href="/contact" onClick={onLinkClick}>
+        Contact
+      </NavLink>
+
       <NavLink
-        href="/signup"
-        className="bg-primary w-auto h-full rounded-md text-white transition-transform duration-300 transform-cpu hover:scale-105"
+        href="/login"
+        className={orientation === "horizontal" ? "ml-2" : ""}
+        onClick={onLinkClick}
       >
         Business Owners
       </NavLink>
