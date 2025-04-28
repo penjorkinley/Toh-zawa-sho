@@ -129,7 +129,7 @@ export default function SecondStepSetup({
 
           {/* Description - full width */}
           <div className="mt-6 md:mt-10 lg:mt-12">
-            <label className="text-text font-normal block mb-2 md:mb-3 lg:text-lg">
+            <label className="text-black font-normal block mb-2 md:mb-3 lg:text-lg">
               Description
             </label>
             <textarea
