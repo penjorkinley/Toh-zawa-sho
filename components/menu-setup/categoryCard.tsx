@@ -1,95 +1,45 @@
 "use client";
 
 import React, { useState } from "react";
-import { DraggableCard } from "../draggable-card";
+import { MoreVertical, Edit, ChevronDown, ChevronUp } from "lucide-react";
 import { MenuItemCard } from "../menu-setup/menu-item";
 import { Button } from "../ui/shadcn-button";
-import FloatingLabelInput from "../floating-label-input";
-import MenuItemEditCard from "./menuItemEditCard";
+import { Input } from "../ui/input";
+import { Card, CardContent, CardHeader } from "../ui/card";
 
 interface MenuItem {
   id: string;
   title: string;
-  position: { x: number; y: number };
   isOpen: boolean;
 }
 
 interface CategoryCardProps {
   id: string;
   title: string;
-  position: { x: number; y: number };
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onPositionChange: (id: string, position: { x: number; y: number }) => void;
   onDelete?: (id: string) => void;
 }
 
 export default function CategoryCard({
   id,
   title,
-  position,
   isOpen,
   onOpenChange,
-  onPositionChange,
   onDelete,
 }: CategoryCardProps) {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [newItemName, setNewItemName] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(title);
 
   const handleAddMenuItem = () => {
-    if (!newItemName.trim()) return;
-
     const newItem: MenuItem = {
       id: `item-${Date.now()}`,
-      title: newItemName,
-      position: { x: 0, y: 0 },
-      isOpen: false,
+      title: "",
+      isOpen: true,
     };
 
     setMenuItems([...menuItems, newItem]);
-    setNewItemName("");
-  };
-
-  //   const handleMenuItemPositionChange = (
-  //     itemId: string,
-  //     newPosition: { x: number; y: number }
-  //   ) => {
-  //     setMenuItems((items) =>
-  //       items.map((item) =>
-  //         item.id === itemId ? { ...item, position: newPosition } : item
-  //       )
-  //     );
-  //   };
-  const handleMenuItemPositionChange = (
-    id: string,
-    newPosition: { x: number; y: number }
-  ) => {
-    setMenuItems((prevCards) => {
-      // Find the dragged card and its index
-      const draggedCardIndex = prevCards.findIndex((card) => card.id === id);
-      if (draggedCardIndex === -1) return prevCards;
-
-      // Calculate the new order based on the dragged position
-      const draggedCard = prevCards[draggedCardIndex];
-      const otherCards = prevCards.filter((card) => card.id !== id);
-
-      // Find where to insert the dragged card
-      let insertIndex = 0;
-      for (let i = 0; i < otherCards.length; i++) {
-        if (newPosition.y > otherCards[i].position.y) {
-          insertIndex = i + 1;
-        }
-      }
-
-      // Create new array with the dragged card in the new position
-      const reorderedCards = [
-        ...otherCards.slice(0, insertIndex),
-        draggedCard,
-        ...otherCards.slice(insertIndex),
-      ];
-
-      return reorderedCards;
-    });
   };
 
   const handleMenuItemOpenChange = (itemId: string, isOpen: boolean) => {
@@ -102,45 +52,104 @@ export default function CategoryCard({
     setMenuItems((items) => items.filter((item) => item.id !== itemId));
   };
 
-  return (
-    <DraggableCard
-      id={id}
-      title={title}
-      position={position}
-      isOpen={isOpen}
-      onOpenChange={onOpenChange}
-      onPositionChange={onPositionChange}
-      onDelete={onDelete}
-    >
-      <div className="px-4 pb-4 space-y-4">
-        <div className="flex justify-between items-center gap-2">
-          <FloatingLabelInput
-            label="Item Name"
-            value={newItemName}
-            onChange={setNewItemName}
-          />
-          <Button onClick={handleAddMenuItem}>Add Item</Button>
-        </div>
+  const handleSaveEdit = () => {
+    // Here you would typically save the changes to your backend
+    setIsEditing(false);
+  };
 
-        <div className="relative space-y-4">
-          {menuItems.map((item) => (
-            <MenuItemCard
-              key={item.id}
-              id={item.id}
-              title={item.title}
-              position={item.position}
-              isOpen={item.isOpen}
-              onOpenChange={(isOpen) =>
-                handleMenuItemOpenChange(item.id, isOpen)
-              }
-              onPositionChange={handleMenuItemPositionChange}
-              onDelete={() => handleDeleteMenuItem(item.id)}
+  if (isEditing) {
+    return (
+      <Card className="border bg-background">
+        <CardContent className="p-4 space-y-4">
+          <Input
+            placeholder="Category Name"
+            value={editedTitle}
+            onChange={(e) => setEditedTitle(e.target.value)}
+          />
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              className="border-primary text-primary"
+              size="sm"
+              onClick={() => setIsEditing(false)}
             >
-              <MenuItemEditCard />
-            </MenuItemCard>
-          ))}
+              Cancel
+            </Button>
+            <Button
+              className="bg-primary text-white"
+              size="sm"
+              onClick={handleSaveEdit}
+            >
+              Save
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="border bg-background">
+      <CardHeader className="p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">=</span>
+            <span className="text-base">{title}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setIsEditing(true)}
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => onOpenChange(!isOpen)}
+            >
+              {isOpen ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
         </div>
-      </div>
-    </DraggableCard>
+      </CardHeader>
+      {isOpen && (
+        <CardContent className="px-4 pb-4 space-y-4">
+          <div className="relative space-y-4">
+            {menuItems.map((item) => (
+              <MenuItemCard
+                key={item.id}
+                id={item.id}
+                title={item.title}
+                position={{ x: 0, y: 0 }}
+                isOpen={item.isOpen}
+                onOpenChange={(isOpen) =>
+                  handleMenuItemOpenChange(item.id, isOpen)
+                }
+                onPositionChange={() => {}}
+                onDelete={() => handleDeleteMenuItem(item.id)}
+              />
+            ))}
+          </div>
+          <Button
+            variant="outline"
+            className="w-full border-primary text-primary"
+            onClick={handleAddMenuItem}
+          >
+            Add items to {title}
+          </Button>
+        </CardContent>
+      )}
+    </Card>
   );
 }

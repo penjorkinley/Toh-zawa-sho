@@ -5,6 +5,7 @@ import { forgotPasswordSchema } from "../../validations/auth/forgot-password";
 import { verifyOtpSchema } from "../../validations/auth/verify-otp";
 import { resetPasswordSchema } from "../../validations/auth/reset-password";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function loginAction(prevState: any, formData: FormData) {
   const emailOrPhone = formData.get("emailOrPhone");
   const password = formData.get("password");

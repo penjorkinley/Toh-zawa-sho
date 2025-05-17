@@ -1,55 +1,65 @@
 "use client";
-import { useState } from "react";
+import { useState, forwardRef } from "react";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 
-interface FloatingLabelInputProps {
+interface FloatingLabelInputProps
+  extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
-  type?: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  className?: string;
-  required?: boolean;
-  disabled?: boolean;
+  error?: string;
 }
 
-export default function FloatingLabelInput({
-  label,
-  type = "text",
-  value,
-  onChange,
-  placeholder,
-  className = "",
-  required = false,
-  disabled = false,
-}: FloatingLabelInputProps) {
+const FloatingLabelInput = forwardRef<
+  HTMLInputElement,
+  FloatingLabelInputProps
+>(({ label, error, className, onFocus, onBlur, ...props }, ref) => {
   const [isFocused, setIsFocused] = useState(false);
+  const hasValue = Boolean(props.value);
+
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    // if (!hasValue) {
+    setIsFocused(true);
+    // }
+
+    onFocus?.(e);
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (!hasValue) {
+      setIsFocused(false);
+    }
+    onBlur?.(e);
+  };
 
   return (
     <div className="relative w-full">
       <motion.label
         animate={{
-          y: isFocused || value ? -10 : 8,
-          fontSize: isFocused || value ? "12px" : "16px",
-          color: isFocused ? "#C78853" : "#6B7280",
+          y: isFocused || hasValue ? -22 : 0,
+          scale: isFocused || hasValue ? 0.85 : 1,
+          color: isFocused ? "#C78853" : error ? "#EF4444" : "#6B7280",
         }}
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className="absolute left-3 bg-white px-1 0"
+        className="absolute left-3 top-2 bg-white px-1 pointer-events-none origin-[0%_50%]"
       >
         {label}
       </motion.label>
       <Input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(value.length > 0)}
-        placeholder={placeholder}
-        required={required}
-        disabled={disabled}
-        className={`border-[1px] border-gray-400 rounded-md px-3 py-2 focus:outline-none focus:ring-primary focus:ring-[1px] focus:border-primary ${className}`}
+        ref={ref}
+        className={`border-[1px] border-gray-400 rounded-md px-3 py-2 focus:outline-none focus:ring-primary focus:ring-[1px] focus:border-primary ${
+          error ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""
+        } ${className || ""}`}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        {...props}
       />
+      {error && (
+        <span className="text-sm text-red-500 mt-1 block">{error}</span>
+      )}
     </div>
   );
-}
+});
+
+FloatingLabelInput.displayName = "FloatingLabelInput";
+
+export default FloatingLabelInput;
