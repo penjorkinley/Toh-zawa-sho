@@ -147,7 +147,7 @@ export default function LeafletMapModal({
               lat: position.coords.latitude,
               lng: position.coords.longitude,
             };
-            newMap.setView([pos.lat, pos.lng], 15);
+            newMap.setView([pos?.lat, pos?.lng], 15);
             newMarker.setLatLng([pos.lat, pos.lng]);
             setCurrentPosition(pos);
 
