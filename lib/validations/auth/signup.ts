@@ -1,9 +1,7 @@
 import * as z from "zod";
 
 const baseSignupSchema = z.object({
-  businessName: z.string({
-    required_error: "Business name is requried",
-  }),
+  businessName: z.string().min(3, "Business name is required"),
   email: z.string().email("Invalid email address"),
   phoneNumber: z.string().min(8, "Phone number must be at least 8 digits"),
   password: z
