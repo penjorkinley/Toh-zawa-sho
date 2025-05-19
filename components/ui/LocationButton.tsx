@@ -71,7 +71,7 @@ export default function LocationInput({
           placeholder="Ex: Below Changangkha Lhakhang"
           value={value}
           onChange={onChange}
-          className={`w-full py-3 focus:outline-none `}
+          className={`w-full py-3 focus:outline-none placeholder-slate-400 px-2`}
         />
         {/* <div className="flex mt-2 justify-end sm:mt-3"> */}
         <button

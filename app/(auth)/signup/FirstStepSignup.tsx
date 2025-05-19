@@ -31,8 +31,10 @@ export default function FirstStepSignup({
   const validateForm = () => {
     try {
       // Only validate the fields in step 1
-      const { email, phoneNumber, password, confirmPassword } = formData;
+      const { businessName, email, phoneNumber, password, confirmPassword } =
+        formData;
       const step1Data = {
+        businessName,
         email,
         phoneNumber,
         password,
@@ -79,6 +81,18 @@ export default function FirstStepSignup({
           subtitle="Join us to start using our services."
         >
           <div className="w-full">
+            <InputField
+              type="text"
+              placeholder="Enter Business Name"
+              label="Business Name"
+              name="businessName"
+              value={formData.businessName}
+              onChange={handleChange}
+              error={errors.businessName}
+              className={`mb-4 lg:mb-5 ${
+                errors.businessName ? "border-red-500" : ""
+              }`}
+            />
             <InputField
               type="email"
               placeholder="Enter Email"
