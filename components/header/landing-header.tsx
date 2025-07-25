@@ -5,6 +5,9 @@ import Image from "next/image";
 import Link from "next/link";
 import NavLinks from "./nav-links/nav-links";
 import gsap from "gsap";
+import { useSession } from "next-auth/react"
+import { signOut } from "@/server/auth";
+ 
 
 export default function LandingHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -12,6 +15,7 @@ export default function LandingHeader() {
   const menuRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const menuItemsRef = useRef<HTMLDivElement>(null);
+  const { data: session } = useSession();
 
   // Close mobile menu when screen size changes to desktop
   useEffect(() => {
@@ -143,6 +147,34 @@ export default function LandingHeader() {
       <div className="hidden lg:block">
         <NavLinks />
       </div>
+
+      {
+        session ? (
+          <div className="hidden lg:flex items-center space-x-4">
+            <Link href="/dashboard" className="text-primary font-medium">
+              Dashboard
+            </Link>
+            <Link href="/profile" className="text-primary font-medium">
+              {session.user?.name || "Profile"}
+            </Link>
+            <button
+              onClick={() => signOut()}
+              className="text-primary font-medium"
+            >
+              Sign Out
+            </button>
+          </div>
+        ) : (
+          <div className="hidden lg:flex items-center space-x-4">
+            <Link href="/login" className="text-primary font-medium">
+              Log In
+            </Link>
+            <Link href="/signup" className="text-primary font-medium">
+              Sign Up
+            </Link>
+          </div>
+        )
+      }
 
       {/* Mobile Menu Button */}
       <button onClick={toggleMenu} className="lg:hidden" aria-label="Open menu">

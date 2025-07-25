@@ -4,6 +4,9 @@ import { loginSchema } from "../../validations/auth/login";
 import { forgotPasswordSchema } from "../../validations/auth/forgot-password";
 import { verifyOtpSchema } from "../../validations/auth/verify-otp";
 import { resetPasswordSchema } from "../../validations/auth/reset-password";
+import { signIn } from "@/server/auth";
+import { redirect } from "next/navigation";
+import { AuthError } from "next-auth";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function loginAction(prevState: any, formData: FormData) {
@@ -15,25 +18,41 @@ export async function loginAction(prevState: any, formData: FormData) {
     const { fieldErrors } = valid.error.flatten();
     return { success: false, errors: fieldErrors };
   }
-  console.log(valid.data);
-  // perform the api calls here
-  //   try {
-  //     const res = await loginUser({
-  //       emailOrPhone,
-  //       password,
-  //     });
-  //     return {
-  //       success: true,
-  //       data: res,
-  //     };
-  //   } catch (error) {
-  //     return {
-  //       success: false,
-  //       error: error.message,
-  //     };
-  //   }
 
-  return {};
+  try {
+    await signIn("credentials", {
+      email: valid.data.emailOrPhone,
+      password: valid.data.password,
+      redirect: false,
+    });
+    
+    // If sign in is successful, redirect to dashboard
+    redirect("/owner-dashboard");
+  } catch (error) {
+    console.error("Login error:", error);
+    
+    if (error instanceof AuthError) {
+      switch (error.type) {
+        case "CredentialsSignin":
+          return {
+            success: false,
+            errors: {
+              emailOrPhone: ["Invalid email/phone or password."],
+            },
+          };
+        default:
+          return {
+            success: false,
+            errors: {
+              emailOrPhone: ["Something went wrong. Please try again."],
+            },
+          };
+      }
+    }
+    
+    // Re-throw redirect errors
+    throw error;
+  }
 }
 
 //for forgot-password

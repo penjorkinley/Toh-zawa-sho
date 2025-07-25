@@ -4,8 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 
+
 export default function LandingPage() {
-  // Feature items for the right column
   const features = [
     {
       icon: "/icons/qr-code.svg",

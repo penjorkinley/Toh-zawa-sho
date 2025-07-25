@@ -5,11 +5,22 @@ import FormContainer from "@/components/auth/FormContainer";
 import InputField from "@/components/ui/InputField";
 import Button from "@/components/ui/Button";
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { loginAction } from "@/lib/actions/auth/actions";
 
 export default function LoginPage() {
-  const [state, callLoginAction] = useActionState(loginAction, {});
+  const [state, callLoginAction, isPending] = useActionState(loginAction, {
+    success: false,
+    errors: {}
+  });
+
+  // Show general error message if there's an authentication error
+  useEffect(() => {
+    if (state.errors?.emailOrPhone) {
+      // Error will be displayed in the form
+    }
+  }, [state]);
+
   return (
     <div className="font-poppins">
       <AuthLayout>
@@ -40,8 +51,11 @@ export default function LoginPage() {
             >
               Forgot Password?
             </Link>
-            <Button className="w-full py-3 lg:py-4 text-base font-medium transition-all duration-300 hover:shadow-lg">
-              Login
+            <Button 
+              className="w-full py-3 lg:py-4 text-base font-medium transition-all duration-300 hover:shadow-lg"
+              disabled={isPending}
+            >
+              {isPending ? "Signing in..." : "Login"}
             </Button>
             <p className="text-center text-sm lg:text-base mt-6 lg:mt-8 text-text">
               Want to use Toh Zawa Sho?{" "}
