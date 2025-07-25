@@ -16,7 +16,7 @@ export default function LoginPage() {
 
   // Show general error message if there's an authentication error
   useEffect(() => {
-    if (state.errors?.emailOrPhone) {
+    if (state?.errors?.emailOrPhone) {
       // Error will be displayed in the form
     }
   }, [state]);
@@ -34,7 +34,7 @@ export default function LoginPage() {
               placeholder="Enter Email or Phone no."
               label="Email / Phone No."
               name="emailOrPhone"
-              error={state.errors?.emailOrPhone}
+              error={state?.errors?.emailOrPhone}
               className="mb-5"
             />
             <InputField
@@ -42,7 +42,7 @@ export default function LoginPage() {
               placeholder="Enter Password"
               label="Password"
               name="password"
-              error={state.errors?.password}
+              error={state?.errors?.password}
               className="mb-2"
             />
             <Link

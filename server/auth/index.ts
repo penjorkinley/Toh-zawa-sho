@@ -1,6 +1,7 @@
 import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
-import { getUserFromDb, comparePassword } from "@/server/auth/utils"
+import { comparePassword } from "@/server/auth/utils"
+import { db } from "../db"
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -12,22 +13,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
       authorize: async (credentials) => {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error("Invalid credentials.")
+          return null
         }
 
         try {
-          // Get user from database
-          const user = await getUserFromDb(credentials.email as string)
-   
+          const user = await db.user.findFirst({
+            where: { email: credentials.email }
+          })
+          
+          // If user not found or password is not set, return null
           if (!user || !user.password) {
-            throw new Error("Invalid credentials.")
+            return null
           }
 
-          // // Compare the provided password with the hashed password in the database
+          // Compare the provided password with the hashed password in the database
           // const isValidPassword = await comparePassword(credentials.password as string, user.password)
           
           // if (!isValidPassword) {
-          //   throw new Error("Invalid credentials.")
+          //   return null
           // }
    
           // Return user object with their profile data (exclude password)
@@ -39,7 +42,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           }
         } catch (error) {
           console.error("Auth error:", error)
-          throw new Error("Invalid credentials.")
+          return null
         }
       },
     }),

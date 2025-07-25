@@ -5,7 +5,7 @@ import { forgotPasswordSchema } from "../../validations/auth/forgot-password";
 import { verifyOtpSchema } from "../../validations/auth/verify-otp";
 import { resetPasswordSchema } from "../../validations/auth/reset-password";
 import { signIn } from "@/server/auth";
-import { redirect } from "next/navigation";
+import { redirect, RedirectType } from "next/navigation";
 import { AuthError } from "next-auth";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -27,7 +27,7 @@ export async function loginAction(prevState: any, formData: FormData) {
     });
     
     // If sign in is successful, redirect to dashboard
-    redirect("/owner-dashboard");
+    redirect("/", RedirectType.push);
   } catch (error) {
     console.error("Login error:", error);
     
