@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import * as z from "zod";
 import { firstStepSchema } from "@/lib/validations/auth/signup";
-import AuthLayout from "@/components/auth/AuthLayout";
 import FormContainer from "@/components/auth/FormContainer";
 import InputField from "@/components/ui/InputField";
 import Button from "@/components/ui/Button";
@@ -75,7 +74,6 @@ export default function FirstStepSignup({
       transition={slideTransition}
       className="w-full"
     >
-      <AuthLayout>
         <FormContainer
           title="Joenpa Lekso!"
           subtitle="Join us to start using our services."
@@ -156,7 +154,6 @@ export default function FirstStepSignup({
             </p>
           </div>
         </FormContainer>
-      </AuthLayout>
     </motion.div>
   );
 }

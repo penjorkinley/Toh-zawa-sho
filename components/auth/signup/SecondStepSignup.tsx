@@ -4,7 +4,6 @@ import Link from "next/link";
 import * as z from "zod";
 import { secondStepSchema } from "@/lib/validations/auth/signup";
 import type { SignupFormData } from "@/lib/validations/auth/signup";
-import AuthLayout from "@/components/auth/AuthLayout";
 import FormContainer from "@/components/auth/FormContainer";
 import Button from "@/components/ui/Button";
 import BackButton from "@/components/ui/BackButton";
@@ -15,8 +14,8 @@ interface SecondStepSignupProps {
   handleBack: () => void;
   handleSubmit: () => void;
   direction: number;
-  slideVariants: undefined;
-  slideTransition: undefined;
+  slideVariants: any;
+  slideTransition: any;
 }
 
 export default function SecondStepSignup({
@@ -236,7 +235,7 @@ export default function SecondStepSignup({
 
   // Desktop view
   const DesktopView = () => (
-    <AuthLayout>
+    <div>
       {/* Back button for desktop view - positioned above form */}
       <div className="w-full mb-6">
         <BackButton onClick={handleBack} title="Back to Personal Details" />
@@ -280,7 +279,7 @@ export default function SecondStepSignup({
           </p>
         </div>
       </FormContainer>
-    </AuthLayout>
+    </div>
   );
 
   return (
