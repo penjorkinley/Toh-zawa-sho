@@ -1,77 +1,32 @@
-"use client";
-
-import { useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import FormContainer from "@/components/auth/FormContainer";
-import InputField from "@/components/ui/InputField";
-import Button from "@/components/ui/Button";
-import BackButton from "@/components/ui/BackButton";
+import ResetPasswordForm from "@/components/auth/ResetPasswordForm";
+import ClientBackButton from "@/components/ui/ClientBackButton";
 import Image from "next/image";
-import { useActionState } from "react";
-import { resetPasswordAction } from "@/lib/actions/auth/actions";
 
 export default function ResetPasswordPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const contact = searchParams.get("contact") || "";
-
-  const [state, callResetPasswordAction] = useActionState(resetPasswordAction, {
-    success: false,
-    errors: {},
-  });
-
-  useEffect(() => {
-    if (state.redirect) {
-      router.push(state.redirect);
-    }
-  }, [state.redirect, router]);
-
   return (
-    <div className="font-poppins relative min-h-screen flex items-center justify-center">
-      <div className="w-full max-w-6xl px-6 py-8">
-        <div className="absolute top-8 left-4 md:top-10 md:left-8">
-          <BackButton onClick={() => router.back()} title="" />
-        </div>
+    <div className="font-poppins relative min-h-[calc(100vh-4rem)] flex items-center justify-center py-8">
+      <div className="w-full max-w-6xl px-6">
+        <ClientBackButton />
 
-        <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-20">
-          <div className="w-full md:w-1/2 flex justify-center mb-6 md:mb-0">
+        <div className="flex flex-col items-center justify-center gap-12 lg:gap-20 pt-16 lg:pt-0">
+          <div className="w-full lg:w-1/2 flex justify-center">
             <Image
               src="/reset-password-img.svg"
               alt="Reset Password"
               width={400}
               height={400}
-              className="object-contain w-72 sm:w-80 md:w-96 lg:w-full"
+              className="object-contain w-72 sm:w-80 md:w-96 lg:w-full max-w-md"
               priority
             />
           </div>
 
-          <div className="w-full md:w-1/2 max-w-md">
-            <FormContainer
-              title="Reset Password"
-              subtitle="Please enter your new password below."
-            >
-              <form action={callResetPasswordAction}>
-                <input type="hidden" name="contact" value={contact} />
-
-                <InputField
-                  type="password"
-                  placeholder="Enter New Password"
-                  label="New Password"
-                  name="password"
-                  error={state.errors?.password}
-                />
-
-                <InputField
-                  type="password"
-                  placeholder="Confirm New Password"
-                  label="Confirm Password"
-                  name="confirmPassword"
-                  error={state.errors?.confirmPassword}
-                />
-                <Button className="mt-4 w-full">Reset Password</Button>
-              </form>
-            </FormContainer>
-          </div>
+          <FormContainer
+            title="Reset Password"
+            subtitle="Please enter your new password below."
+          >
+            <ResetPasswordForm />
+          </FormContainer>
         </div>
       </div>
     </div>

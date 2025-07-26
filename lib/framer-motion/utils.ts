@@ -32,7 +32,7 @@ export const useStepNavigation = (
   };
 
   const handleBack = () => {
-    setDirection(-1);
+    setDirection(1);
     setStep(1);
   };
 

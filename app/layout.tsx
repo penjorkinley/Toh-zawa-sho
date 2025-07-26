@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Poppins } from "next/font/google";
+import { SessionProvider } from "next-auth/react"
 
 export const metadata: Metadata = {
   title: "Toh Zawa Sho",
@@ -20,7 +21,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${poppins.variable} bg-screen`}>{children}</body>
+      <body className={`${poppins.variable} bg-screen`}>
+        <SessionProvider>{children}</SessionProvider>
+      </body>
     </html>
   );
 }
