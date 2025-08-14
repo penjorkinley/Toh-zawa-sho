@@ -1,15 +1,8 @@
 "use client";
 
+import { LayoutGrid, Utensils, UtensilsCrossed } from "lucide-react";
 import type * as React from "react";
-import {
-  LayoutGrid,
-  ShoppingCart,
-  Users,
-  Utensils,
-  UtensilsCrossed,
-} from "lucide-react";
 
-import { NavMain } from "./nav-main";
 import {
   Sidebar,
   SidebarContent,
@@ -17,6 +10,7 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { NavMain } from "./nav-main";
 import { NavUser } from "./nav-user";
 
 // This is sample data.
@@ -27,12 +21,12 @@ const data = {
     avatar: "/avatars/shadcn.jpg",
   },
   navMain: [
-    {
-      title: "Order",
-      url: "order",
-      icon: ShoppingCart,
-      isActive: true,
-    },
+    // {
+    //   title: "Order",
+    //   url: "order",
+    //   icon: ShoppingCart,
+    //   isActive: true,
+    // },
     {
       title: "Menu Setup",
       url: "menu-setup",
@@ -43,11 +37,11 @@ const data = {
       url: "tables",
       icon: LayoutGrid,
     },
-    {
-      title: "Employee",
-      url: "employee",
-      icon: Users,
-    },
+    // {
+    //   title: "Employee",
+    //   url: "employee",
+    //   icon: Users,
+    // },
   ],
 };
 
