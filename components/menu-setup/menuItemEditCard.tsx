@@ -1,9 +1,9 @@
 "use client";
-import React, { useState } from "react";
+import { Image } from "lucide-react";
+import { useState } from "react";
 import FloatingLabelInput from "../floating-label-input";
 import { Card } from "../ui/card";
 import { Button } from "../ui/shadcn-button";
-import { Image } from "lucide-react";
 
 export default function MenuItemEditCard() {
   const [title, setTitle] = useState("");
@@ -20,16 +20,20 @@ export default function MenuItemEditCard() {
         <FloatingLabelInput
           label="Food/ Drink Name"
           value={title}
-          onChange={setTitle}
+          onChange={(e) => setTitle(e.target.value)}
         />
       </div>
-      <FloatingLabelInput label="Price" value={price} onChange={setPrice} />
+      <FloatingLabelInput
+        label="Price"
+        value={price}
+        onChange={(e) => setPrice(e.target.value)}
+      />
       <FloatingLabelInput
         // className="h-32"
         type="textarea"
         label="Description"
         value={description}
-        onChange={setDescription}
+        onChange={(e) => setDescription(e.target.value)}
       />
       <div className="flex justify-between items-center gap-2 ">
         <p className="text-md underline font-semibold">Add Size</p>
