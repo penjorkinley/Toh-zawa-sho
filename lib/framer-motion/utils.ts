@@ -1,6 +1,8 @@
+// lib/framer-motion/utils.ts
+import type { SlideTransition, SlideVariants } from "@/lib/types/animations";
 import { Dispatch, SetStateAction } from "react";
 
-export const slideVariants = {
+export const slideVariants: SlideVariants = {
   enter: (direction: number) => ({
     x: direction > 0 ? 1000 : -1000,
     opacity: 0,
@@ -17,7 +19,7 @@ export const slideVariants = {
   }),
 };
 
-export const slideTransition = {
+export const slideTransition: SlideTransition = {
   duration: 0.6,
   ease: "easeInOut",
 };

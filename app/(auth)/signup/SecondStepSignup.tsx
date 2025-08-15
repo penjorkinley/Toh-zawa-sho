@@ -15,8 +15,8 @@ interface SecondStepSignupProps {
   handleBack: () => void;
   handleSubmit: () => void;
   direction: number;
-  slideVariants: undefined;
-  slideTransition: undefined;
+  slideVariants: any;
+  slideTransition: any;
 }
 
 export default function SecondStepSignup({

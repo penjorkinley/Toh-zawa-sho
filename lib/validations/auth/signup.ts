@@ -1,43 +1,65 @@
-import * as z from "zod";
+// lib/validations/auth/signup.ts
+import { z } from "zod";
 
-const baseSignupSchema = z.object({
-  businessName: z.string().min(3, "Business name is required"),
-  email: z.string().email("Invalid email address"),
-  phoneNumber: z.string().min(8, "Phone number must be at least 8 digits"),
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters")
-    .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      "Password must contain at least one uppercase letter, one lowercase letter, and one number"
-    ),
-  confirmPassword: z.string(),
-  licenseFile: z.instanceof(File).optional().nullable(),
-});
-
-export const firstStepSchema = baseSignupSchema
-  .pick({
-    businessName: true,
-    email: true,
-    phoneNumber: true,
-    password: true,
-    confirmPassword: true,
+// First step validation (personal details)
+export const firstStepSchema = z
+  .object({
+    businessName: z.string().min(1, "Business name is required"),
+    email: z.string().email("Invalid email address"),
+    phoneNumber: z.string().min(1, "Phone number is required"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
   });
 
-export const secondStepSchema = baseSignupSchema.pick({
-  licenseFile: true,
+// Second step validation (file upload)
+export const secondStepSchema = z.object({
+  licenseFile: z
+    .any()
+    .refine(
+      (file) => file !== null && file !== undefined,
+      "Business license file is required"
+    )
+    .refine((file) => {
+      if (!file) return false;
+      const allowedTypes = [
+        "application/pdf",
+        "image/jpeg",
+        "image/png",
+        "image/jpg",
+      ];
+      return allowedTypes.includes(file.type);
+    }, "Please upload a PDF, JPG, or PNG file")
+    .refine((file) => {
+      if (!file) return false;
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      return file.size <= maxSize;
+    }, "File size must be less than 5MB"),
 });
 
-export const signupSchema = baseSignupSchema.refine(
-  (data) => data.password === data.confirmPassword,
-  {
+// Complete signup validation (both steps combined)
+export const signupSchema = z
+  .object({
+    businessName: z.string().min(1, "Business name is required"),
+    email: z.string().email("Invalid email address"),
+    phoneNumber: z.string().min(1, "Phone number is required"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string(),
+    licenseFile: z.any().optional(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
-  }
-);
+  });
 
-export type SignupFormData = z.infer<typeof baseSignupSchema>;
+export type SignupFormData = {
+  businessName: string;
+  email: string;
+  phoneNumber: string;
+  password: string;
+  confirmPassword: string;
+  licenseFile: File | null;
+};
