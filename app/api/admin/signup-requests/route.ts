@@ -1,9 +1,6 @@
 // app/api/admin/signup-requests/route.ts
-import {
-  getPendingSignupRequests,
-  updateSignupRequestStatus,
-} from "@/lib/auth/helpers";
-import { supabase } from "@/lib/supabase/client";
+import { updateSignupRequestStatus } from "@/lib/auth/helpers";
+import { supabase, supabaseAdmin } from "@/lib/supabase/client";
 import { NextRequest, NextResponse } from "next/server";
 
 // Get pending signup requests
@@ -20,7 +17,8 @@ export async function GET() {
       );
     }
 
-    const { data: profile } = await supabase
+    // Use supabaseAdmin to check admin status (bypasses RLS)
+    const { data: profile } = await supabaseAdmin
       .from("user_profiles")
       .select("role, status")
       .eq("id", user.id)
@@ -37,18 +35,18 @@ export async function GET() {
       );
     }
 
-    const result = await getPendingSignupRequests();
+    // Use supabaseAdmin to get all pending requests (bypasses RLS)
+    const { data, error } = await supabaseAdmin
+      .from("signup_requests")
+      .select("*")
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
 
-    if (!result.success) {
-      return NextResponse.json(
-        { success: false, error: result.error },
-        { status: 500 }
-      );
-    }
+    if (error) throw error;
 
     return NextResponse.json({
       success: true,
-      data: result.data,
+      data: data || [],
     });
   } catch (error) {
     console.error("Get signup requests error:", error);
@@ -82,7 +80,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: profile } = await supabase
+    // Use supabaseAdmin to check admin status (bypasses RLS)
+    const { data: profile } = await supabaseAdmin
       .from("user_profiles")
       .select("role, status")
       .eq("id", user.id)
@@ -99,6 +98,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Use supabaseAdmin for all update operations (bypasses RLS)
     const result = await updateSignupRequestStatus(requestId, status, user.id);
 
     if (!result.success) {
@@ -113,10 +113,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `Signup request ${status} successfully`,
+      message: `Registration ${status} successfully`,
     });
   } catch (error) {
-    console.error("Update signup request error:", error);
+    console.error("Update signup status error:", error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }

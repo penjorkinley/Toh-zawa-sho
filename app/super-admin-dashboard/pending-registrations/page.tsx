@@ -1,7 +1,7 @@
 // app/super-admin-dashboard/pending-registrations/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/shadcn-button";
 import { Badge } from "@/components/ui/badge";
@@ -16,9 +16,27 @@ import {
   Phone,
   MapPin,
   Calendar,
+  Loader2,
+  AlertTriangle,
 } from "lucide-react";
 
-interface PendingRegistration {
+// Database interface (from your API)
+interface SignupRequest {
+  id: string;
+  user_id: string;
+  business_name: string;
+  email: string;
+  phone_number: string;
+  business_license_url?: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
+}
+
+// Modal interface (what the modal expects)
+interface ModalPendingRegistration {
   id: string;
   businessName: string;
   ownerName: string;
@@ -40,65 +58,161 @@ interface PendingRegistration {
 
 export default function PendingRegistrationsPage() {
   const [selectedRegistration, setSelectedRegistration] =
-    useState<PendingRegistration | null>(null);
+    useState<ModalPendingRegistration | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Mock data - replace with API calls
   const [pendingRegistrations, setPendingRegistrations] = useState<
-    PendingRegistration[]
-  >([
-    {
-      id: "1",
-      businessName: "Paro Valley Restaurant",
-      ownerName: "Karma Wangchuk",
-      email: "karma@parovalley.bt",
-      phone: "+975-17-123-456",
-      businessType: "Restaurant",
-      location: "Paro, Bhutan",
-      submittedDate: "2024-01-15",
-      licenseDocument: "/documents/license1.pdf",
-      coverPhoto: "/images/restaurant1-cover.jpg",
-      logo: "/images/restaurant1-logo.jpg",
-      description: "Traditional Bhutanese cuisine with modern ambiance",
-      openingHours: {
-        days: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-        openTime: "09:00 AM",
-        closeTime: "10:00 PM",
-      },
-    },
-    {
-      id: "2",
-      businessName: "Dragon Kitchen",
-      ownerName: "Tenzin Norbu",
-      email: "tenzin@dragonkitchen.bt",
-      phone: "+975-17-789-012",
-      businessType: "Cafe",
-      location: "Thimphu, Bhutan",
-      submittedDate: "2024-01-14",
-      licenseDocument: "/documents/license2.pdf",
-      description: "Cozy cafe serving coffee and light meals",
-      openingHours: {
-        days: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-        openTime: "07:00 AM",
-        closeTime: "09:00 PM",
-      },
-    },
-  ]);
+    SignupRequest[]
+  >([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const handleApprove = (id: string) => {
-    setPendingRegistrations((prev) => prev.filter((reg) => reg.id !== id));
-    // API call to approve registration
-    console.log(`Approved registration ${id}`);
+  // Fetch pending registrations
+  useEffect(() => {
+    fetchPendingRegistrations();
+  }, []);
+
+  const fetchPendingRegistrations = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch("/api/admin/signup-requests");
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to fetch requests");
+      }
+
+      if (result.success) {
+        setPendingRegistrations(result.data);
+      }
+    } catch (err) {
+      console.error("Error fetching pending registrations:", err);
+      setError(
+        err instanceof Error ? err.message : "An unexpected error occurred"
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleReject = (id: string) => {
-    setPendingRegistrations((prev) => prev.filter((reg) => reg.id !== id));
-    // API call to reject registration
-    console.log(`Rejected registration ${id}`);
+  const handleApprove = async (id: string) => {
+    try {
+      setActionLoading(id);
+      setError(null);
+
+      const response = await fetch("/api/admin/signup-requests", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          requestId: id,
+          status: "approved",
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to approve registration");
+      }
+
+      if (result.success) {
+        // Remove from pending list
+        setPendingRegistrations((prev) => prev.filter((reg) => reg.id !== id));
+
+        // Close modal if this request was being reviewed
+        if (selectedRegistration?.id === id) {
+          closeModal();
+        }
+
+        // Show success message (you can implement toast notifications)
+        console.log("Registration approved successfully");
+      }
+    } catch (err) {
+      console.error("Error approving registration:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to approve registration"
+      );
+    } finally {
+      setActionLoading(null);
+    }
   };
 
-  const openModal = (registration: PendingRegistration) => {
-    setSelectedRegistration(registration);
+  const handleReject = async (id: string) => {
+    try {
+      setActionLoading(id);
+      setError(null);
+
+      const response = await fetch("/api/admin/signup-requests", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          requestId: id,
+          status: "rejected",
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to reject registration");
+      }
+
+      if (result.success) {
+        // Remove from pending list
+        setPendingRegistrations((prev) => prev.filter((reg) => reg.id !== id));
+
+        // Close modal if this request was being reviewed
+        if (selectedRegistration?.id === id) {
+          closeModal();
+        }
+
+        // Show success message
+        console.log("Registration rejected successfully");
+      }
+    } catch (err) {
+      console.error("Error rejecting registration:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to reject registration"
+      );
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Transform database data to modal format
+  const transformForModal = (
+    dbRegistration: SignupRequest
+  ): ModalPendingRegistration => {
+    return {
+      id: dbRegistration.id,
+      businessName: dbRegistration.business_name,
+      ownerName: dbRegistration.business_name + " Owner", // You can improve this
+      email: dbRegistration.email,
+      phone: dbRegistration.phone_number,
+      businessType: "Restaurant", // Default since we don't have this in signup yet
+      location: "Location not provided", // Default since we don't have this in signup yet
+      submittedDate: new Date(dbRegistration.created_at).toLocaleDateString(),
+      licenseDocument: dbRegistration.business_license_url || "",
+      coverPhoto: undefined,
+      logo: undefined,
+      description: "Description not provided",
+      openingHours: {
+        days: [],
+        openTime: "",
+        closeTime: "",
+      },
+    };
+  };
+
+  const openModal = (registration: SignupRequest) => {
+    const modalData = transformForModal(registration);
+    setSelectedRegistration(modalData);
     setIsModalOpen(true);
   };
 
@@ -106,6 +220,26 @@ export default function PendingRegistrationsPage() {
     setIsModalOpen(false);
     setSelectedRegistration(null);
   };
+
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Pending Registrations
+          </h1>
+          <p className="text-muted-foreground">
+            Review and approve restaurant registration requests
+          </p>
+        </div>
+
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Loading pending registrations...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -118,6 +252,27 @@ export default function PendingRegistrationsPage() {
           Review and approve restaurant registration requests
         </p>
       </div>
+
+      {/* Error Alert */}
+      {error && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-red-800">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="font-medium">Error:</span>
+              <span>{error}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fetchPendingRegistrations}
+                className="ml-auto"
+              >
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats */}
       <Card>
@@ -161,9 +316,8 @@ export default function PendingRegistrationsPage() {
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-4">
                     <Avatar className="h-12 w-12">
-                      <AvatarImage src={registration.logo} />
                       <AvatarFallback>
-                        {registration.businessName
+                        {registration.business_name
                           .substring(0, 2)
                           .toUpperCase()}
                       </AvatarFallback>
@@ -172,10 +326,10 @@ export default function PendingRegistrationsPage() {
                     <div className="space-y-2">
                       <div>
                         <h3 className="text-lg font-semibold">
-                          {registration.businessName}
+                          {registration.business_name}
                         </h3>
                         <p className="text-sm text-muted-foreground">
-                          by {registration.ownerName}
+                          by {registration.business_name} Owner
                         </p>
                       </div>
 
@@ -186,22 +340,21 @@ export default function PendingRegistrationsPage() {
                         </div>
                         <div className="flex items-center gap-1">
                           <Phone className="h-3 w-3" />
-                          {registration.phone}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {registration.location}
+                          {registration.phone_number}
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <Badge variant="secondary">
-                          {registration.businessType}
-                        </Badge>
+                        <Badge variant="secondary">Restaurant</Badge>
                         <Badge variant="outline">
                           <Calendar className="h-3 w-3 mr-1" />
-                          {registration.submittedDate}
+                          {new Date(
+                            registration.created_at
+                          ).toLocaleDateString()}
                         </Badge>
+                        {registration.business_license_url && (
+                          <Badge variant="outline">📄 License Uploaded</Badge>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -211,6 +364,7 @@ export default function PendingRegistrationsPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => openModal(registration)}
+                      disabled={!!actionLoading}
                     >
                       <Eye className="h-4 w-4 mr-1" />
                       Review
@@ -220,8 +374,13 @@ export default function PendingRegistrationsPage() {
                       size="sm"
                       className="bg-green-600 hover:bg-green-700"
                       onClick={() => handleApprove(registration.id)}
+                      disabled={!!actionLoading}
                     >
-                      <Check className="h-4 w-4 mr-1" />
+                      {actionLoading === registration.id ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <Check className="h-4 w-4 mr-1" />
+                      )}
                       Approve
                     </Button>
 
@@ -229,8 +388,13 @@ export default function PendingRegistrationsPage() {
                       variant="destructive"
                       size="sm"
                       onClick={() => handleReject(registration.id)}
+                      disabled={!!actionLoading}
                     >
-                      <X className="h-4 w-4 mr-1" />
+                      {actionLoading === registration.id ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <X className="h-4 w-4 mr-1" />
+                      )}
                       Reject
                     </Button>
                   </div>

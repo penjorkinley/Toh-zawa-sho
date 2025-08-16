@@ -1,4 +1,4 @@
-// app/api/auth/login/route.ts
+// app/api/auth/login/route.ts - FIX THE REDIRECT URL
 import { loginUser } from "@/lib/auth/helpers";
 import { loginSchema } from "@/lib/validations/auth/login";
 import { NextRequest, NextResponse } from "next/server";
@@ -37,9 +37,9 @@ export async function POST(request: NextRequest) {
     if (loginResult.isFirstLogin) {
       redirectUrl = "/information-setup";
     } else if (loginResult.profile?.role === "super-admin") {
-      redirectUrl = "/super-admin/dashboard";
+      redirectUrl = "/super-admin-dashboard/dashboard"; // ✅ FIXED: Added -dashboard
     } else if (loginResult.profile?.role === "restaurant-owner") {
-      redirectUrl = "/restaurant/dashboard";
+      redirectUrl = "/owner-dashboard/menu-setup";
     }
 
     // Additional safety check (though loginUser should handle this)

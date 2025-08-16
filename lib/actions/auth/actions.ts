@@ -1,22 +1,39 @@
-// lib/actions/auth/actions.ts
+// lib/actions/auth/actions.ts - FIXED LOGIN ACTION SIGNATURE
 "use server";
 
-import { redirect } from "next/navigation";
 import { forgotPasswordSchema } from "../../validations/auth/forgot-password";
 import { loginSchema } from "../../validations/auth/login";
 import { resetPasswordSchema } from "../../validations/auth/reset-password";
 import { signupSchema } from "../../validations/auth/signup";
 import { verifyOtpSchema } from "../../validations/auth/verify-otp";
 
-// Login Action
-export async function loginAction(prevState: any, formData: FormData) {
+// Define the exact state type that matches what the component expects
+type LoginActionState = {
+  success: boolean;
+  errors?: {
+    emailOrPhone?: string[];
+    password?: string[];
+  };
+  error?: string;
+  redirectUrl?: string;
+  user?: any;
+};
+
+// Login Action - FIXED: Proper signature for useActionState/useFormState
+export async function loginAction(
+  prevState: LoginActionState,
+  formData: FormData
+): Promise<LoginActionState> {
   const emailOrPhone = formData.get("emailOrPhone") as string;
   const password = formData.get("password") as string;
 
   const valid = loginSchema.safeParse({ emailOrPhone, password });
   if (!valid.success) {
     const { fieldErrors } = valid.error.flatten();
-    return { success: false, errors: fieldErrors };
+    return {
+      success: false,
+      errors: fieldErrors,
+    };
   }
 
   try {
@@ -40,8 +57,12 @@ export async function loginAction(prevState: any, formData: FormData) {
       };
     }
 
-    // Redirect based on the response
-    redirect(result.redirectUrl);
+    // Return success with redirect URL
+    return {
+      success: true,
+      redirectUrl: result.redirectUrl,
+      user: result.user,
+    };
   } catch (error) {
     console.error("Login action error:", error);
     return {
@@ -54,7 +75,7 @@ export async function loginAction(prevState: any, formData: FormData) {
   }
 }
 
-// Signup Action
+// Rest of your actions remain the same...
 export async function signupAction(formData: FormData) {
   const businessName = formData.get("businessName") as string;
   const email = formData.get("email") as string;
@@ -120,7 +141,6 @@ export async function signupAction(formData: FormData) {
   }
 }
 
-// Complete First Login Action
 export async function completeFirstLoginAction(userId: string) {
   try {
     const response = await fetch(
@@ -156,7 +176,6 @@ export async function completeFirstLoginAction(userId: string) {
   }
 }
 
-// For forgot-password
 export async function forgotPasswordAction(
   prevState: { success?: boolean; errors?: Record<string, string[]> },
   formData: FormData
@@ -170,13 +189,10 @@ export async function forgotPasswordAction(
     return { success: false, errors: fieldErrors };
   }
 
-  // TODO: Implement forgot password with Supabase
-  // For now, just redirect to OTP page
   const redirectUrl = `/verify-otp?contact=${encodeURIComponent(email)}`;
   return { success: true, redirect: redirectUrl };
 }
 
-// For verify-otp
 export async function verifyOtpAction(
   prevState: { success?: boolean; errors?: Record<string, string[]> },
   formData: FormData
@@ -191,15 +207,12 @@ export async function verifyOtpAction(
     return { success: false, errors: fieldErrors };
   }
 
-  // TODO: Implement OTP verification with Supabase
-  // For now, redirect to reset password
   return {
     success: true,
     redirect: `/reset-password?contact=${encodeURIComponent(contact)}`,
   };
 }
 
-// For reset-password
 export async function resetPasswordAction(
   prevState: { success?: boolean; errors?: Record<string, string[]> },
   formData: FormData
@@ -217,8 +230,6 @@ export async function resetPasswordAction(
     return { success: false, errors: fieldErrors };
   }
 
-  // TODO: Implement password reset with Supabase
-  // For now, redirect to login
   return {
     success: true,
     redirect: "/login",

@@ -168,7 +168,7 @@ export async function completeFirstLogin(userId: string) {
 // Get pending signup requests (for super admin)
 export async function getPendingSignupRequests() {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin // ✅ Use supabaseAdmin
       .from("signup_requests")
       .select("*")
       .eq("status", "pending")
@@ -193,8 +193,8 @@ export async function updateSignupRequestStatus(
   adminId: string
 ) {
   try {
-    // Update signup request
-    const { data: request, error: requestError } = await supabase
+    // Update signup request using service role
+    const { data: request, error: requestError } = await supabaseAdmin // ✅ Use supabaseAdmin
       .from("signup_requests")
       .update({
         status,
@@ -207,8 +207,8 @@ export async function updateSignupRequestStatus(
 
     if (requestError) throw requestError;
 
-    // Update user profile status
-    const { error: profileError } = await supabase
+    // Update user profile status using service role
+    const { error: profileError } = await supabaseAdmin // ✅ Use supabaseAdmin
       .from("user_profiles")
       .update({ status })
       .eq("id", request.user_id);
