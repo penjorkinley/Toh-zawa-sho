@@ -1,27 +1,38 @@
 // app/api/admin/signup-requests/route.ts
-import { updateSignupRequestStatus } from "@/lib/auth/helpers";
-import { supabase, supabaseAdmin } from "@/lib/supabase/client";
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@supabase/supabase-js";
+import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 // Get pending signup requests
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Verify user is authenticated and is super admin
+    // Create standard supabase client with cookies
+    const cookieStore = cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+
+    // Create admin client with direct service role
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+      process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+    );
+
+    // Verify user is authenticated
     const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    // Use supabaseAdmin to check admin status (bypasses RLS)
+    // Check if user is a super-admin
     const { data: profile } = await supabaseAdmin
       .from("user_profiles")
       .select("role, status")
-      .eq("id", user.id)
+      .eq("id", session.user.id)
       .single();
 
     if (
@@ -35,14 +46,16 @@ export async function GET() {
       );
     }
 
-    // Use supabaseAdmin to get all pending requests (bypasses RLS)
+    // Fetch pending signup requests
     const { data, error } = await supabaseAdmin
       .from("signup_requests")
       .select("*")
       .eq("status", "pending")
       .order("created_at", { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
     return NextResponse.json({
       success: true,
@@ -60,7 +73,20 @@ export async function GET() {
 // Approve or reject signup request
 export async function POST(request: NextRequest) {
   try {
-    const { requestId, status } = await request.json();
+    // Create standard supabase client with cookies
+    const cookieStore = cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+
+    // Create admin client with direct service role
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+      process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+    );
+
+    // Parse request body with proper typing
+    const body = await request.json();
+    const requestId = body.requestId as string;
+    const status = body.status as "approved" | "rejected";
 
     if (!requestId || !["approved", "rejected"].includes(status)) {
       return NextResponse.json(
@@ -69,22 +95,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify user is authenticated and is super admin
+    // Verify user is authenticated
     const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    // Use supabaseAdmin to check admin status (bypasses RLS)
+    // Check if user is a super-admin
     const { data: profile } = await supabaseAdmin
       .from("user_profiles")
       .select("role, status")
-      .eq("id", user.id)
+      .eq("id", session.user.id)
       .single();
 
     if (
@@ -98,18 +124,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use supabaseAdmin for all update operations (bypasses RLS)
-    const result = await updateSignupRequestStatus(requestId, status, user.id);
+    // Update signup request
+    const { data: signupData, error: requestError } = await supabaseAdmin
+      .from("signup_requests")
+      .update({
+        status,
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: session.user.id,
+      })
+      .eq("id", requestId)
+      .select("user_id")
+      .single();
 
-    if (!result.success) {
-      return NextResponse.json(
-        { success: false, error: result.error },
-        { status: 500 }
-      );
+    if (requestError) {
+      throw requestError;
     }
 
-    // TODO: Send email notification to the restaurant owner
-    // You can implement email sending here using services like Resend, SendGrid, etc.
+    // Update user profile status
+    const { error: profileError } = await supabaseAdmin
+      .from("user_profiles")
+      .update({ status })
+      .eq("id", signupData.user_id);
+
+    if (profileError) {
+      throw profileError;
+    }
 
     return NextResponse.json({
       success: true,

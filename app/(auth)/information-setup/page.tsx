@@ -8,10 +8,8 @@ import SelectField from "@/components/ui/SelectField";
 import LocationInput from "@/components/ui/LocationButton";
 import OpeningDaysSelector from "@/components/ui/OpeningDaysSelector";
 import TimeSelector from "@/components/ui/TimeSelector";
-import { BusinessSetupData } from "@/lib/validations/information-setup/setup";
 import { useRouter } from "next/navigation";
 import InputField from "@/components/ui/InputField";
-import { completeFirstLoginAction } from "@/lib/actions/auth/actions";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 const businessTypeOptions = [
@@ -25,20 +23,6 @@ const businessTypeOptions = [
   { value: "other", label: "Other" },
 ];
 
-interface FormData {
-  businessName: string;
-  email: string;
-  phoneNumber: string;
-  businessType: string;
-  location: string;
-  openingDays: string[];
-  openingTime: string;
-  closingTime: string;
-  description: string;
-  coverPhoto: File | null;
-  logo: File | null;
-}
-
 export default function InformationSetupPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
@@ -46,90 +30,115 @@ export default function InformationSetupPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Fixed the type to allow undefined values
+  const [fieldErrors, setFieldErrors] = useState<
+    Record<string, string | undefined>
+  >({});
+
   // Create Supabase client for client components
   const supabase = createClientComponentClient();
 
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState({
     businessName: "",
     email: "",
     phoneNumber: "",
     businessType: "",
     location: "",
-    openingDays: [],
-    openingTime: "",
-    closingTime: "",
+    openingDays: [] as string[],
+    openingTime: "09:00 AM",
+    closingTime: "08:00 PM",
     description: "",
-    coverPhoto: null,
-    logo: null,
+    coverPhoto: null as File | null,
+    logo: null as File | null,
   });
 
-  // Check authentication and get user data on mount
+  // Check if user is authenticated and on first login
   useEffect(() => {
-    checkAuthAndLoadUserData();
-  }, []);
+    async function checkAuth() {
+      try {
+        setLoading(true);
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-  const checkAuthAndLoadUserData = async () => {
-    try {
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
+        if (!user) {
+          setError("Not authenticated");
+          router.push("/login");
+          return;
+        }
 
-      if (authError || !user) {
-        router.push("/login");
-        return;
+        setUser(user);
+
+        // Check if this is first login
+        const { data: profile, error: profileError } = await supabase
+          .from("user_profiles")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+
+        if (profileError) {
+          throw profileError;
+        }
+
+        // If not first login, redirect to appropriate dashboard
+        if (!profile.first_login) {
+          if (profile.role === "super-admin") {
+            router.push("/super-admin-dashboard/dashboard");
+          } else {
+            router.push("/owner-dashboard/menu-setup");
+          }
+          return;
+        }
+
+        // Pre-fill known data
+        setFormData((prev) => ({
+          ...prev,
+          businessName: profile.business_name || "",
+          phoneNumber: profile.phone_number || "",
+          email: user.email || "",
+        }));
+      } catch (err) {
+        console.error("Auth error:", err);
+        setError("Authentication error. Please try logging in again.");
+      } finally {
+        setLoading(false);
       }
-
-      // Get user profile
-      const { data: profile, error: profileError } = await supabase
-        .from("user_profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-
-      if (profileError) {
-        console.error("Error fetching user profile:", profileError);
-        setError("Failed to load user profile");
-        return;
-      }
-
-      // Check if user is approved
-      if (profile.status !== "approved") {
-        router.push("/login");
-        return;
-      }
-
-      // Check if this is actually a first login
-      if (!profile.first_login) {
-        // User has already completed setup, redirect to dashboard
-        router.push(
-          profile.role === "super-admin"
-            ? "/super-admin-dashboard/dashboard"
-            : "/restaurant/dashboard"
-        );
-        return;
-      }
-
-      setUser(user);
-
-      // Pre-populate form with existing data
-      setFormData((prev) => ({
-        ...prev,
-        businessName: profile.business_name || "",
-        email: user.email || "",
-        phoneNumber: profile.phone_number || "",
-      }));
-    } catch (err) {
-      console.error("Auth check error:", err);
-      setError("Authentication failed");
-    } finally {
-      setLoading(false);
     }
+
+    checkAuth();
+  }, [supabase, router]);
+
+  // Basic form validation
+  const validateForm = () => {
+    const errors: Record<string, string | undefined> = {};
+
+    if (!formData.businessType) {
+      errors.businessType = "Please select a business type";
+    }
+
+    if (!formData.location) {
+      errors.location = "Please enter your business location";
+    }
+
+    if (formData.openingDays.length === 0) {
+      errors.openingDays = "Please select at least one opening day";
+    }
+
+    if (!formData.openingTime) {
+      errors.openingTime = "Please select an opening time";
+    }
+
+    if (!formData.closingTime) {
+      errors.closingTime = "Please select a closing time";
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleChange = (
     e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >
   ) => {
     const { name, value } = e.target;
@@ -137,13 +146,60 @@ export default function InformationSetupPage() {
       ...prev,
       [name]: value,
     }));
+
+    // Clear field error when user makes changes
+    if (fieldErrors[name]) {
+      setFieldErrors({
+        ...fieldErrors,
+        [name]: undefined,
+      });
+    }
   };
 
-  const handleCoverPhotoChange = (file: File) => {
+  const handleDaySelection = (day: string) => {
+    setFormData((prev) => {
+      const newDays = prev.openingDays.includes(day)
+        ? prev.openingDays.filter((d) => d !== day)
+        : [...prev.openingDays, day];
+
+      return {
+        ...prev,
+        openingDays: newDays,
+      };
+    });
+
+    // Clear error when days are selected
+    if (fieldErrors.openingDays) {
+      setFieldErrors({
+        ...fieldErrors,
+        openingDays: undefined,
+      });
+    }
+  };
+
+  const handlePresetDays = (preset: "all" | "weekdays" | "weekends") => {
+    let newDays: string[] = [];
+
+    if (preset === "all") {
+      newDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    } else if (preset === "weekdays") {
+      newDays = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+    } else if (preset === "weekends") {
+      newDays = ["Sat", "Sun"];
+    }
+
     setFormData((prev) => ({
       ...prev,
-      coverPhoto: file,
+      openingDays: newDays,
     }));
+
+    // Clear error when days are selected
+    if (fieldErrors.openingDays) {
+      setFieldErrors({
+        ...fieldErrors,
+        openingDays: undefined,
+      });
+    }
   };
 
   const handleLogoChange = (file: File) => {
@@ -151,87 +207,111 @@ export default function InformationSetupPage() {
       ...prev,
       logo: file,
     }));
-  };
 
-  const handleDaySelection = (day: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      openingDays: prev.openingDays.includes(day)
-        ? prev.openingDays.filter((d) => d !== day)
-        : [...prev.openingDays, day],
-    }));
-  };
-
-  const handlePresetDays = (preset: "all" | "weekdays" | "weekends") => {
-    if (preset === "all") {
-      setFormData((prev) => ({
-        ...prev,
-        openingDays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-      }));
-    } else if (preset === "weekdays") {
-      setFormData((prev) => ({
-        ...prev,
-        openingDays: ["Mon", "Tue", "Wed", "Thu", "Fri"],
-      }));
-    } else if (preset === "weekends") {
-      setFormData((prev) => ({
-        ...prev,
-        openingDays: ["Sat", "Sun"],
-      }));
+    // Clear error
+    if (fieldErrors.logo) {
+      setFieldErrors({
+        ...fieldErrors,
+        logo: undefined,
+      });
     }
   };
 
-  const handleLocationSelect = (location: string) => {
+  const handleCoverPhotoChange = (file: File) => {
     setFormData((prev) => ({
       ...prev,
-      location,
+      coverPhoto: file,
     }));
+
+    // Clear error
+    if (fieldErrors.coverPhoto) {
+      setFieldErrors({
+        ...fieldErrors,
+        coverPhoto: undefined,
+      });
+    }
+  };
+
+  const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      location: value,
+    }));
+
+    // Clear field error
+    if (fieldErrors.location) {
+      setFieldErrors({
+        ...fieldErrors,
+        location: undefined,
+      });
+    }
   };
 
   const handleMapClick = () => {
-    // Open map modal or redirect to map selection
-    console.log("Opening map for location selection");
+    console.log("Open map functionality");
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
+  // Handle form submission
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+
+    if (submitting) return;
+
+    // Clear previous errors
     setError(null);
 
+    // Validate form
+    if (!validateForm()) {
+      return;
+    }
+
     try {
-      // TODO: Save the business setup data to your database
-      // This would typically involve:
-      // 1. Uploading images to storage
-      // 2. Saving business information to database
-      // 3. Updating user profile
+      setSubmitting(true);
 
-      // For now, just mark first login as complete
-      if (user) {
-        const result = await completeFirstLoginAction(user.id);
-        if (result.success) {
-          // Redirect to appropriate dashboard
-          const { data: profile } = await supabase
-            .from("user_profiles")
-            .select("role")
-            .eq("id", user.id)
-            .single();
+      // Create form data for submission
+      const submitFormData = new FormData();
+      submitFormData.append("userId", user.id);
+      submitFormData.append("businessType", formData.businessType);
+      submitFormData.append("location", formData.location);
+      formData.openingDays.forEach((day) => {
+        submitFormData.append("openingDays", day);
+      });
+      submitFormData.append("openingTime", formData.openingTime);
+      submitFormData.append("closingTime", formData.closingTime);
+      submitFormData.append("description", formData.description || "");
 
-          if (profile?.role === "super-admin") {
-            router.push("/super-admin-dashboard/dashboard");
-          } else {
-            router.push("/restaurant/dashboard");
-          }
-        } else {
-          setError(result.error || "Failed to complete setup");
-        }
+      // Add files if they exist
+      if (formData.logo) {
+        submitFormData.append("logo", formData.logo);
       }
+
+      if (formData.coverPhoto) {
+        submitFormData.append("coverPhoto", formData.coverPhoto);
+      }
+
+      // Submit to API
+      const response = await fetch("/api/info-setup", {
+        method: "POST",
+        body: submitFormData,
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        setError(result.error || "Failed to save business information");
+        setSubmitting(false);
+        return;
+      }
+
+      // Redirect to the menu setup page
+      router.push("/owner-dashboard/menu-setup");
     } catch (err) {
       console.error("Setup submission error:", err);
       setError("Failed to save business information");
-    } finally {
       setSubmitting(false);
     }
-  };
+  }
 
   const handleCancel = () => {
     router.push("/login");
@@ -266,153 +346,136 @@ export default function InformationSetupPage() {
       <BackButton title="Complete Setup" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="max-w-3xl mx-auto">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Complete Your Restaurant Setup
+          <h1 className="text-3xl font-bold text-gray-900 mb-6">
+            Business Information Setup
           </h1>
-          <p className="text-gray-600 mb-8">
-            Please provide additional information to complete your registration
+          <p className="text-lg text-gray-600 mb-8">
+            Please provide details about your business to complete the setup
+            process.
           </p>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md mb-6">
-              {error}
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-red-600">{error}</p>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-8">
-            {/* Basic Information (Read-only) */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Business Type Selection */}
             <div>
-              <h3 className="text-lg font-medium mb-4 text-gray-900">
-                Basic Information
-              </h3>
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="opacity-75">
-                    <InputField
-                      type="text"
-                      label="Business Name"
-                      name="businessName"
-                      value={formData.businessName}
-                      onChange={handleChange}
-                      placeholder="Your business name"
-                      className="bg-gray-100 cursor-not-allowed"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Read-only</p>
-                  </div>
-                  <div className="opacity-75">
-                    <InputField
-                      type="email"
-                      label="Email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      className="bg-gray-100 cursor-not-allowed"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Read-only</p>
-                  </div>
-                  <div className="opacity-75">
-                    <InputField
-                      type="text"
-                      label="Phone Number"
-                      name="phoneNumber"
-                      value={formData.phoneNumber}
-                      onChange={handleChange}
-                      className="bg-gray-100 cursor-not-allowed"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Read-only</p>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  * These fields are from your registration and cannot be
-                  changed here
-                </p>
-              </div>
+              <SelectField
+                label="Business Type"
+                name="businessType"
+                options={businessTypeOptions}
+                value={formData.businessType}
+                onChange={handleChange}
+                error={fieldErrors.businessType}
+              />
             </div>
 
-            {/* Restaurant setup information */}
+            {/* Logo and Cover Photo Upload */}
+            <div className="space-y-6">
+              <ImageUploader
+                logo={formData.logo}
+                coverPhoto={formData.coverPhoto}
+                onLogoChange={handleLogoChange}
+                onCoverPhotoChange={handleCoverPhotoChange}
+              />
+            </div>
+
+            {/* Location */}
             <div>
-              <h3 className="text-lg font-medium mb-4 text-gray-900">
-                Restaurant Information
+              <LocationInput
+                value={formData.location}
+                onChange={handleLocationChange}
+                onMapClick={handleMapClick}
+                error={fieldErrors.location}
+              />
+            </div>
+
+            {/* Business Hours */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900">
+                Business Hours
               </h3>
 
-              <div className="space-y-4 md:space-y-6">
-                <SelectField
-                  label="Business Type *"
-                  name="businessType"
-                  value={formData.businessType}
-                  onChange={handleChange}
-                  options={businessTypeOptions}
-                  placeholder="Select Business Type"
-                  className="lg:col-span-2"
-                />
-
-                <LocationInput
-                  value={formData.location}
-                  onChange={handleChange}
-                  onMapClick={handleMapClick}
-                />
-
-                <div className="space-y-4">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Restaurant Images
-                  </label>
-                  <ImageUploader
-                    coverPhoto={formData.coverPhoto}
-                    logo={formData.logo}
-                    onCoverPhotoChange={handleCoverPhotoChange}
-                    onLogoChange={handleLogoChange}
-                  />
-                </div>
-
+              <div>
                 <OpeningDaysSelector
                   selectedDays={formData.openingDays}
                   onChange={handleDaySelection}
                   onPresetSelect={handlePresetDays}
+                  error={fieldErrors.openingDays}
                 />
+              </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <TimeSelector
-                    label="Opening Time *"
-                    name="openingTime"
-                    value={formData.openingTime}
-                    onChange={handleChange}
-                  />
-
-                  <TimeSelector
-                    label="Closing Time *"
-                    name="closingTime"
-                    value={formData.closingTime}
-                    onChange={handleChange}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Restaurant Description
-                  </label>
-                  <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleChange}
-                    rows={4}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
-                    placeholder="Tell customers about your restaurant..."
-                  />
-                </div>
+              <div className="grid grid-cols-2 gap-4">
+                <TimeSelector
+                  label="Opening Time"
+                  name="openingTime"
+                  value={formData.openingTime}
+                  onChange={handleChange}
+                  error={fieldErrors.openingTime}
+                />
+                <TimeSelector
+                  label="Closing Time"
+                  name="closingTime"
+                  value={formData.closingTime}
+                  onChange={handleChange}
+                  error={fieldErrors.closingTime}
+                />
               </div>
             </div>
 
-            <div className="flex justify-end gap-4 pt-4">
+            {/* Description */}
+            <div>
+              <InputField
+                label="Business Description"
+                name="description"
+                type="text"
+                value={formData.description}
+                onChange={handleChange}
+                placeholder="Tell customers about your business..."
+              />
+            </div>
+
+            {/* Buttons */}
+            <div className="flex justify-end space-x-4 pt-4">
               <Button
                 type="button"
-                variant="secondary"
+                variant="outline"
                 onClick={handleCancel}
                 disabled={submitting}
               >
                 Cancel
               </Button>
               <Button type="submit" disabled={submitting}>
-                {submitting ? "Saving..." : "Complete Setup"}
+                {submitting ? (
+                  <>
+                    <svg
+                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Saving...
+                  </>
+                ) : (
+                  "Complete Setup"
+                )}
               </Button>
             </div>
           </form>

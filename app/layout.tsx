@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Poppins } from "next/font/google";
+import { Toaster } from "react-hot-toast";
+import { AuthProvider } from "@/components/AuthProvider";
 
 export const metadata: Metadata = {
   title: "Toh Zawa Sho",
@@ -20,7 +22,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${poppins.variable} bg-screen`}>{children}</body>
+      <body className={`${poppins.variable} bg-screen`}>
+        <AuthProvider>
+          {children} <Toaster position="top-right" />
+        </AuthProvider>
+      </body>
     </html>
   );
 }

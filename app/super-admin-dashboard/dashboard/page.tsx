@@ -1,138 +1,201 @@
-// app/super-admin-dashboard/dashboard/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/shadcn-button";
 import {
-  Building2,
-  UserCheck,
-  Users,
-  TrendingUp,
-  AlertCircle,
-  CheckCircle,
   Loader2,
-  AlertTriangle,
-  RefreshCw,
+  CheckCircle,
+  XCircle,
+  Store,
+  ClipboardCheck,
+  TrendingUp,
 } from "lucide-react";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
-interface DashboardStats {
-  totalRestaurants: number;
-  pendingRegistrations: number;
-  monthlyGrowth: number;
-}
-
-interface RecentActivity {
-  id: string;
-  business_name: string;
-  email: string;
-  status: string;
-  created_at: string;
-  type: "registration" | "approval";
+// Interface for dashboard data
+interface DashboardData {
+  pendingRegistrations: any[];
+  approvedRestaurants: any[];
+  statsData: {
+    totalRestaurants: number;
+    pendingRegistrations: number;
+    activeRestaurants: number;
+    newRegistrationsThisWeek: number;
+  };
 }
 
 export default function SuperAdminDashboardPage() {
-  const [stats, setStats] = useState<DashboardStats>({
-    totalRestaurants: 0,
-    pendingRegistrations: 0,
-    monthlyGrowth: 0,
-  });
-  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
+  const [dashboardData, setDashboardData] = useState<DashboardData>({
+    pendingRegistrations: [],
+    approvedRestaurants: [],
+    statsData: {
+      totalRestaurants: 0,
+      pendingRegistrations: 0,
+      activeRestaurants: 0,
+      newRegistrationsThisWeek: 0,
+    },
+  });
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
+  // Create supabase client for auth operations
+  const supabase = createClientComponentClient();
+
+  // Fetch dashboard data on component mount
   useEffect(() => {
     fetchDashboardData();
   }, []);
 
+  // Function to refresh auth token
+  async function refreshAuthToken() {
+    try {
+      const { data, error } = await supabase.auth.refreshSession();
+      if (error) {
+        console.error("Failed to refresh auth token:", error);
+        throw error;
+      }
+      return data.session;
+    } catch (err) {
+      console.error("Auth refresh error:", err);
+      throw err;
+    }
+  }
+
+  // Function to fetch dashboard data
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Fetch pending registrations count
-      const pendingResponse = await fetch("/api/admin/signup-requests");
-      const pendingResult = await pendingResponse.json();
+      // Refresh auth token before making the request
+      await refreshAuthToken();
 
-      if (!pendingResponse.ok) {
-        throw new Error(
-          pendingResult.error || "Failed to fetch pending requests"
-        );
-      }
-
-      const pendingCount = pendingResult.success
-        ? pendingResult.data.length
-        : 0;
-
-      // For now, we'll use the pending data for recent activity
-      // In the future, you can create separate endpoints for comprehensive stats
-      const recentData: RecentActivity[] = pendingResult.success
-        ? pendingResult.data.slice(0, 5).map((item: any) => ({
-            id: item.id,
-            business_name: item.business_name,
-            email: item.email,
-            status: item.status,
-            created_at: item.created_at,
-            type: "registration" as const,
-          }))
-        : [];
-
-      setStats({
-        totalRestaurants: 0, // You'll need to create an endpoint for this
-        pendingRegistrations: pendingCount,
-        monthlyGrowth: 0, // You'll need to calculate this from database
+      // Fetch pending registrations
+      const response = await fetch("/api/admin/signup-requests", {
+        // Add cache control headers to prevent stale responses
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
       });
 
-      setRecentActivity(recentData);
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Handle unauthorized error specifically
+          throw new Error("Unauthorized access. Please try logging in again.");
+        } else {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to fetch data");
+        }
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to fetch data");
+      }
+
+      // Get pending registrations from response
+      const pendingRegistrations = result.data || [];
+
+      // Set dashboard data with what we have
+      setDashboardData({
+        pendingRegistrations,
+        approvedRestaurants: [], // You would fetch this in a real app
+        statsData: {
+          totalRestaurants: pendingRegistrations.length,
+          pendingRegistrations: pendingRegistrations.length,
+          activeRestaurants: 0, // You would calculate this in a real app
+          newRegistrationsThisWeek: 0, // You would calculate this in a real app
+        },
+      });
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
       setError(
-        err instanceof Error ? err.message : "An unexpected error occurred"
+        err instanceof Error ? err.message : "Failed to fetch dashboard data"
       );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await fetchDashboardData();
-    setRefreshing(false);
-  };
+  // Function to handle approval/rejection of registrations
+  const handleRegistrationAction = async (
+    id: string,
+    action: "approved" | "rejected"
+  ) => {
+    try {
+      setActionLoading(id);
 
-  const formatTimeAgo = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInMinutes = Math.floor(
-      (now.getTime() - date.getTime()) / (1000 * 60)
-    );
+      // Refresh auth token before making the request
+      await refreshAuthToken();
 
-    if (diffInMinutes < 60) {
-      return `${diffInMinutes} minutes ago`;
-    } else if (diffInMinutes < 1440) {
-      const hours = Math.floor(diffInMinutes / 60);
-      return `${hours} hour${hours > 1 ? "s" : ""} ago`;
-    } else {
-      const days = Math.floor(diffInMinutes / 1440);
-      return `${days} day${days > 1 ? "s" : ""} ago`;
+      const response = await fetch("/api/admin/signup-requests", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+        body: JSON.stringify({
+          requestId: id,
+          status: action,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || `Failed to ${action} registration`);
+      }
+
+      // Refresh dashboard data after action
+      fetchDashboardData();
+    } catch (err) {
+      console.error(`Error with ${action} action:`, err);
+      setError(
+        err instanceof Error ? err.message : `Failed to ${action} registration`
+      );
+    } finally {
+      setActionLoading(null);
     }
   };
 
+  // Function to format time ago
+  function formatTimeAgo(dateString: string): string {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    let interval = Math.floor(seconds / 31536000);
+    if (interval > 1) return `${interval} years ago`;
+
+    interval = Math.floor(seconds / 2592000);
+    if (interval > 1) return `${interval} months ago`;
+
+    interval = Math.floor(seconds / 86400);
+    if (interval > 1) return `${interval} days ago`;
+
+    interval = Math.floor(seconds / 3600);
+    if (interval > 1) return `${interval} hours ago`;
+
+    interval = Math.floor(seconds / 60);
+    if (interval > 1) return `${interval} minutes ago`;
+
+    return "just now";
+  }
+
+  // Show loading state only when loading is true, regardless of data
   if (loading) {
     return (
-      <div className="p-6 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Welcome to Toh Zawa Sho Super Admin Dashboard
-          </p>
-        </div>
-
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <span className="ml-2">Loading dashboard data...</span>
+      <div className="p-6 flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+          <p className="mt-4 text-gray-600">Loading dashboard data...</p>
         </div>
       </div>
     );
@@ -140,197 +203,231 @@ export default function SuperAdminDashboardPage() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Welcome to Toh Zawa Sho Super Admin Dashboard
-          </p>
-        </div>
-        <Button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          variant="outline"
-          size="sm"
-        >
-          {refreshing ? (
-            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-          ) : (
-            <RefreshCw className="h-4 w-4 mr-1" />
-          )}
-          Refresh
-        </Button>
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-muted-foreground">
+          Overview of your restaurant management system
+        </p>
       </div>
 
-      {/* Error Alert */}
       {error && (
         <Card className="border-red-200 bg-red-50">
           <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-red-800">
-              <AlertTriangle className="h-4 w-4" />
-              <span className="font-medium">Error:</span>
+            <div className="flex items-center text-red-600">
               <span>{error}</span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefresh}
-                className="ml-auto"
-              >
-                Retry
-              </Button>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      {/* Dashboard Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Restaurants
-            </CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalRestaurants}</div>
-            <p className="text-xs text-muted-foreground">
-              Active restaurants on platform
-            </p>
-            <p className="text-xs text-orange-600 mt-1">
-              * Coming soon - endpoint needed
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Total Restaurants
+                </p>
+                <p className="text-3xl font-bold">
+                  {dashboardData.statsData.totalRestaurants}
+                </p>
+              </div>
+              <div className="p-2 bg-background rounded-full">
+                <Store className="h-5 w-5 text-primary" />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Total registered restaurants
             </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Pending Registrations
-            </CardTitle>
-            <UserCheck className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
-              {stats.pendingRegistrations}
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Pending Approvals
+                </p>
+                <p className="text-3xl font-bold">
+                  {dashboardData.statsData.pendingRegistrations}
+                </p>
+              </div>
+              <div className="p-2 bg-background rounded-full">
+                <ClipboardCheck className="h-5 w-5 text-amber-500" />
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Awaiting verification
+            <p className="text-xs text-muted-foreground mt-2">
+              Registrations awaiting approval
             </p>
-            {stats.pendingRegistrations > 0 && (
-              <p className="text-xs text-orange-600 mt-1">⚡ Action required</p>
-            )}
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Monthly Growth
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              +{stats.monthlyGrowth}%
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Active Restaurants
+                </p>
+                <p className="text-3xl font-bold">
+                  {dashboardData.statsData.activeRestaurants}
+                </p>
+              </div>
+              <div className="p-2 bg-background rounded-full">
+                <Store className="h-5 w-5 text-green-500" />
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              New registrations this month
+            <p className="text-xs text-muted-foreground mt-2">
+              Actively operating restaurants
             </p>
-            <p className="text-xs text-orange-600 mt-1">
-              * Coming soon - calculation needed
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  New This Week
+                </p>
+                <p className="text-3xl font-bold">
+                  {dashboardData.statsData.newRegistrationsThisWeek}
+                </p>
+              </div>
+              <div className="p-2 bg-background rounded-full">
+                <TrendingUp className="h-5 w-5 text-blue-500" />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              New registrations in the past week
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent Activity */}
+      {/* Pending Registrations */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
+          <CardTitle>Pending Registrations</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {recentActivity.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No recent activity
-              </p>
-            ) : (
-              recentActivity.map((activity) => (
-                <div
-                  key={activity.id}
-                  className="flex items-center justify-between"
-                >
-                  <div className="flex items-center space-x-3">
-                    {activity.status === "pending" ? (
-                      <AlertCircle className="h-4 w-4 text-orange-500" />
-                    ) : (
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                    )}
-                    <div>
-                      <p className="text-sm font-medium">
-                        {activity.business_name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {activity.email}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge
-                      variant={
-                        activity.status === "pending" ? "secondary" : "default"
-                      }
-                      className={
-                        activity.status === "pending"
-                          ? "bg-orange-100 text-orange-800"
-                          : "bg-green-100 text-green-800"
-                      }
+          {loading ? (
+            <div className="flex justify-center items-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : dashboardData.pendingRegistrations.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No pending registrations found.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left font-medium py-3 px-4">
+                      Business Name
+                    </th>
+                    <th className="text-left font-medium py-3 px-4">Email</th>
+                    <th className="text-left font-medium py-3 px-4">Phone</th>
+                    <th className="text-left font-medium py-3 px-4">
+                      Submitted
+                    </th>
+                    <th className="text-left font-medium py-3 px-4">License</th>
+                    <th className="text-right font-medium py-3 px-4">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dashboardData.pendingRegistrations.map((registration) => (
+                    <tr
+                      key={registration.id}
+                      className="border-b hover:bg-gray-50"
                     >
-                      {activity.status}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {formatTimeAgo(activity.created_at)}
-                    </span>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+                      <td className="py-3 px-4 font-medium">
+                        {registration.business_name}
+                      </td>
+                      <td className="py-3 px-4">{registration.email}</td>
+                      <td className="py-3 px-4">{registration.phone_number}</td>
+                      <td className="py-3 px-4">
+                        {formatTimeAgo(registration.created_at)}
+                      </td>
+                      <td className="py-3 px-4">
+                        {registration.business_license_url ? (
+                          <a
+                            href={registration.business_license_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary underline"
+                          >
+                            View
+                          </a>
+                        ) : (
+                          "None"
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-right space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            handleRegistrationAction(
+                              registration.id,
+                              "approved"
+                            )
+                          }
+                          disabled={actionLoading === registration.id}
+                          className="text-green-600 border-green-600 hover:bg-green-50"
+                        >
+                          {actionLoading === registration.id ? (
+                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                          ) : (
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                          )}
+                          Approve
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            handleRegistrationAction(
+                              registration.id,
+                              "rejected"
+                            )
+                          }
+                          disabled={actionLoading === registration.id}
+                          className="text-red-600 border-red-600 hover:bg-red-50"
+                        >
+                          {actionLoading === registration.id ? (
+                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                          ) : (
+                            <XCircle className="h-4 w-4 mr-1" />
+                          )}
+                          Reject
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Quick Actions */}
-      {stats.pendingRegistrations > 0 && (
-        <Card className="border-orange-200 bg-orange-50">
-          <CardHeader>
-            <CardTitle className="text-orange-800">Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-orange-800 font-medium">
-                  You have {stats.pendingRegistrations} registration
-                  {stats.pendingRegistrations > 1 ? "s" : ""} awaiting review
-                </p>
-                <p className="text-xs text-orange-600">
-                  Review and approve pending restaurant applications
-                </p>
-              </div>
-              <Button
-                className="bg-orange-600 hover:bg-orange-700"
-                onClick={() =>
-                  (window.location.href =
-                    "/super-admin-dashboard/pending-registrations")
-                }
-              >
-                Review Now
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Approved Restaurants (placeholder for now) */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Approved Restaurants</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            No approved restaurants found.
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
