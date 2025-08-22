@@ -121,16 +121,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, [router, supabase]);
 
-  // Sign out function
+  // Clean server-side logout
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
+      // Call server-side logout API
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error("Server logout failed");
+      }
+
+      // Clear local state
       setUser(null);
       setProfile(null);
+      setError(null);
+
+      // The server has already cleared cookies, now redirect
       router.push("/login");
     } catch (err) {
       console.error("Sign out error:", err);
-      setError("Failed to sign out");
+
+      // Even if server logout fails, clear local state and redirect
+      setUser(null);
+      setProfile(null);
+      router.push("/login");
+
+      throw err; // Re-throw so UI can handle error
     }
   };
 

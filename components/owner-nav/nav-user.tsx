@@ -46,14 +46,15 @@ export function NavUser({
       // Show loading toast
       const loadingToast = toast.loading("Logging out...");
 
+      // Call server-side logout - much more reliable!
       await signOut();
 
-      // Show success toast
+      // Success
       toast.dismiss(loadingToast);
       toast.success("Logged out successfully");
     } catch (error) {
       console.error("Logout error:", error);
-      toast.error("Failed to log out. Please try again.");
+      toast.error("Logged out with issues, but you have been signed out.");
     } finally {
       setIsLoggingOut(false);
     }
@@ -99,7 +100,7 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer">
                 <User />
                 Profile
               </DropdownMenuItem>
