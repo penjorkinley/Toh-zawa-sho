@@ -1,7 +1,5 @@
-// app/api/upload-image/route.ts
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Octokit } from "@octokit/rest";
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 // Configuration for GitHub repository
@@ -17,8 +15,8 @@ const BASE_PATH = "public/images";
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify authentication
-    const supabase = createServerComponentClient({ cookies });
+    // UPDATED: Use new server client
+    const supabase = await createSupabaseServerClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();

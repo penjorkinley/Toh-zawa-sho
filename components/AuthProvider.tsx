@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createSupabaseClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
 // Define types
@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   const router = useRouter();
-  const supabase = createClientComponentClient();
+  const supabase = createSupabaseClient();
 
   // Initial session and profile check
   useEffect(() => {
@@ -55,113 +55,97 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } = await supabase.auth.getSession();
 
         if (sessionError) {
-          throw sessionError;
+          console.error("Session error:", sessionError);
+          setError("Failed to get session");
+          return;
         }
 
-        if (!session) {
+        if (!session?.user) {
           setUser(null);
           setProfile(null);
+          setError(null);
           return;
         }
 
         setUser(session.user);
 
         // Get user profile
-        const { data: userProfile, error: profileError } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from("user_profiles")
           .select("*")
           .eq("id", session.user.id)
           .single();
 
         if (profileError) {
-          throw profileError;
+          console.error("Profile error:", profileError);
+          setError("Failed to get user profile");
+          return;
         }
 
-        setProfile(userProfile as UserProfile);
+        setProfile(profileData);
+        setError(null);
       } catch (err) {
         console.error("Auth check error:", err);
-        setError("Authentication error");
+        setError("An unexpected error occurred");
       } finally {
         setLoading(false);
       }
     };
 
-    // Set up auth state change listener
+    checkSession();
+
+    // Listen for auth state changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-        if (session) {
-          setUser(session.user);
+      if (event === "SIGNED_IN" && session) {
+        setUser(session.user);
 
-          try {
-            const { data: userProfile, error: profileError } = await supabase
-              .from("user_profiles")
-              .select("*")
-              .eq("id", session.user.id)
-              .single();
+        // Get user profile
+        const { data: profileData, error: profileError } = await supabase
+          .from("user_profiles")
+          .select("*")
+          .eq("id", session.user.id)
+          .single();
 
-            if (profileError) throw profileError;
-
-            setProfile(userProfile as UserProfile);
-          } catch (err) {
-            console.error("Profile fetch error:", err);
-          }
+        if (!profileError) {
+          setProfile(profileData);
         }
-      }
-
-      if (event === "SIGNED_OUT") {
+      } else if (event === "SIGNED_OUT") {
         setUser(null);
         setProfile(null);
         router.push("/login");
       }
     });
 
-    // Check session on component mount
-    checkSession();
-
-    // Clean up subscription on unmount
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [supabase, router]);
+    return () => subscription.unsubscribe();
+  }, [router, supabase]);
 
   // Sign out function
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setProfile(null);
-    router.push("/login");
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setProfile(null);
+      router.push("/login");
+    } catch (err) {
+      console.error("Sign out error:", err);
+      setError("Failed to sign out");
+    }
   };
 
-  // Refresh session
+  // Refresh session function
   const refreshSession = async () => {
     try {
-      setLoading(true);
-
       const { data, error } = await supabase.auth.refreshSession();
-
       if (error) throw error;
 
       if (data.session) {
         setUser(data.session.user);
-
-        // Refresh profile data too
-        const { data: userProfile, error: profileError } = await supabase
-          .from("user_profiles")
-          .select("*")
-          .eq("id", data.session.user.id)
-          .single();
-
-        if (profileError) throw profileError;
-
-        setProfile(userProfile as UserProfile);
       }
     } catch (err) {
-      console.error("Session refresh error:", err);
+      console.error("Refresh session error:", err);
       setError("Failed to refresh session");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -181,7 +165,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Custom hook for using auth
-export function useAuth() {
-  return useContext(AuthContext);
-}
+// Hook to use auth context
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};

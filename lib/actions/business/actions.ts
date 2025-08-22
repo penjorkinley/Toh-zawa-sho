@@ -1,9 +1,7 @@
-// lib/actions/business/actions.ts
 "use server";
 
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { BusinessSetupData } from "@/lib/validations/information-setup/setup";
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 interface SaveBusinessInfoResult {
@@ -19,7 +17,8 @@ export async function saveBusinessInfoAction(
   coverPhotoUrl?: string
 ): Promise<SaveBusinessInfoResult> {
   try {
-    const supabase = createServerComponentClient({ cookies });
+    // UPDATED: Use new server client
+    const supabase = await createSupabaseServerClient();
 
     // First update user_profiles to mark first_login as false
     const { error: profileUpdateError } = await supabase
@@ -89,16 +88,16 @@ export async function uploadBusinessImage(
 
     // Create a unique filename
     const fileExt = file.name.split(".").pop();
-    const fileName = `${userId}-${Date.now()}.${fileExt}`;
+    const uniqueFileName = `${userId}-${Date.now()}.${fileExt}`;
 
-    // Use your existing GitHub upload API endpoint
+    // Make API call to upload the image
     const response = await fetch("/api/upload-image", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        fileName,
+        fileName: uniqueFileName,
         folder,
         base64Content: base64,
         contentType: file.type,
@@ -106,15 +105,14 @@ export async function uploadBusinessImage(
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || "Failed to upload image");
+      const error = await response.json();
+      throw new Error(error.error || "Failed to upload image");
     }
 
-    const data = await response.json();
-
+    const result = await response.json();
     return {
       success: true,
-      url: data.url, // GitHub raw content URL
+      url: result.url,
     };
   } catch (error) {
     console.error(`Error uploading ${folder} image:`, error);
@@ -134,7 +132,8 @@ export async function completeBusinessSetupAction(
 ): Promise<void> {
   "use server";
 
-  const supabase = createServerComponentClient({ cookies });
+  // UPDATED: Use new server client
+  const supabase = await createSupabaseServerClient();
 
   // Get the current user
   const {

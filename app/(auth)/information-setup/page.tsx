@@ -10,7 +10,7 @@ import OpeningDaysSelector from "@/components/ui/OpeningDaysSelector";
 import TimeSelector from "@/components/ui/TimeSelector";
 import { useRouter } from "next/navigation";
 import InputField from "@/components/ui/InputField";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createSupabaseClient } from "@/lib/supabase/client";
 
 const businessTypeOptions = [
   { value: "restaurant", label: "Restaurant" },
@@ -36,7 +36,7 @@ export default function InformationSetupPage() {
   >({});
 
   // Create Supabase client for client components
-  const supabase = createClientComponentClient();
+  const supabase = createSupabaseClient();
 
   const [formData, setFormData] = useState({
     businessName: "",

@@ -1,7 +1,6 @@
 // app/api/auth/login/route.ts
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { loginSchema } from "@/lib/validations/auth/login";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -21,9 +20,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create a Supabase client with cookie handling
-    const cookieStore = cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+    // Create server client with proper Next.js 15 compatibility
+    const supabase = await createSupabaseServerClient();
 
     // Try to login with email first
     let email = emailOrPhone;
@@ -79,36 +77,30 @@ export async function POST(request: NextRequest) {
     if (profile.status !== "approved") {
       await supabase.auth.signOut();
       return NextResponse.json(
-        { success: false, error: "Your account is still pending approval" },
+        {
+          success: false,
+          error:
+            profile.status === "pending"
+              ? "Your account is pending approval"
+              : "Your account has been rejected",
+        },
         { status: 403 }
       );
     }
 
-    // Determine redirect based on role and first login
-    let redirectUrl = "/";
-    if (profile.first_login) {
-      redirectUrl = "/information-setup";
-    } else if (profile.role === "super-admin") {
-      redirectUrl = "/super-admin-dashboard/dashboard";
-    } else if (profile.role === "restaurant-owner") {
-      redirectUrl = "/owner-dashboard/menu-setup";
-    }
-
-    // Return success with user data
     return NextResponse.json({
       success: true,
       user: {
         id: authData.user.id,
         email: authData.user.email,
         role: profile.role,
-        businessName: profile.business_name,
+        status: profile.status,
+        first_login: profile.first_login,
+        business_name: profile.business_name,
       },
-      profile,
-      isFirstLogin: profile.first_login,
-      redirectUrl,
     });
   } catch (error) {
-    console.error("Login API error:", error);
+    console.error("Login error:", error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }

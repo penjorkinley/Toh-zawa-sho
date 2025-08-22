@@ -1,5 +1,6 @@
 // lib/auth/helpers.ts
-import { supabase, supabaseAdmin } from "@/lib/supabase/client";
+import { supabaseAdmin } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
 
 export type UserRole = "super-admin" | "restaurant-owner";
 export type UserStatus = "pending" | "approved" | "rejected";
@@ -23,6 +24,12 @@ export interface UserProfile {
   created_at: string;
   updated_at: string;
 }
+
+// Create a basic supabase client for server-side operations that don't require admin privileges
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 // Sign up a new restaurant owner
 export async function signupRestaurantOwner(data: SignupData) {
@@ -77,7 +84,7 @@ export async function signupRestaurantOwner(data: SignupData) {
   }
 }
 
-// Login user
+// Login user - Note: This is typically handled by the login API route
 export async function loginUser(emailOrPhone: string, password: string) {
   try {
     // Try to login with email first
@@ -145,10 +152,10 @@ export async function loginUser(emailOrPhone: string, password: string) {
   }
 }
 
-// Mark first login as complete
+// Mark first login as complete - Used by server-side API routes
 export async function completeFirstLogin(userId: string) {
   try {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from("user_profiles")
       .update({ first_login: false })
       .eq("id", userId);
@@ -168,7 +175,7 @@ export async function completeFirstLogin(userId: string) {
 // Get pending signup requests (for super admin)
 export async function getPendingSignupRequests() {
   try {
-    const { data, error } = await supabaseAdmin // ✅ Use supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from("signup_requests")
       .select("*")
       .eq("status", "pending")
@@ -194,7 +201,7 @@ export async function updateSignupRequestStatus(
 ) {
   try {
     // Update signup request using service role
-    const { data: request, error: requestError } = await supabaseAdmin // ✅ Use supabaseAdmin
+    const { data: request, error: requestError } = await supabaseAdmin
       .from("signup_requests")
       .update({
         status,
@@ -208,7 +215,7 @@ export async function updateSignupRequestStatus(
     if (requestError) throw requestError;
 
     // Update user profile status using service role
-    const { error: profileError } = await supabaseAdmin // ✅ Use supabaseAdmin
+    const { error: profileError } = await supabaseAdmin
       .from("user_profiles")
       .update({ status })
       .eq("id", request.user_id);
@@ -226,7 +233,8 @@ export async function updateSignupRequestStatus(
   }
 }
 
-// Get current user profile
+// Get current user profile - Note: This should typically be used client-side
+// For server-side usage, consider using the server client
 export async function getCurrentUserProfile() {
   try {
     const {

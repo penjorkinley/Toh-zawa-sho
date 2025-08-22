@@ -1,26 +1,21 @@
 // app/api/admin/signup-requests/route.ts
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-import { createClient } from "@supabase/supabase-js";
-import { cookies } from "next/headers";
+import {
+  createSupabaseServerClient,
+  supabaseAdmin,
+} from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
 // Get pending signup requests
 export async function GET(request: NextRequest) {
   try {
-    // Create standard supabase client with cookies
-    const cookieStore = cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
-
-    // Create admin client with direct service role
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-      process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-    );
+    // Create server client with proper Next.js 15 compatibility
+    const supabase = await createSupabaseServerClient();
 
     // Verify user is authenticated
     const {
       data: { session },
     } = await supabase.auth.getSession();
+
     if (!session) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
@@ -73,15 +68,8 @@ export async function GET(request: NextRequest) {
 // Approve or reject signup request
 export async function POST(request: NextRequest) {
   try {
-    // Create standard supabase client with cookies
-    const cookieStore = cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
-
-    // Create admin client with direct service role
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-      process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-    );
+    // Create server client with proper Next.js 15 compatibility
+    const supabase = await createSupabaseServerClient();
 
     // Parse request body with proper typing
     const body = await request.json();
@@ -99,6 +87,7 @@ export async function POST(request: NextRequest) {
     const {
       data: { session },
     } = await supabase.auth.getSession();
+
     if (!session) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
@@ -124,38 +113,51 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update signup request
-    const { data: signupData, error: requestError } = await supabaseAdmin
+    // Get the signup request details
+    const { data: signupRequest, error: fetchError } = await supabaseAdmin
+      .from("signup_requests")
+      .select("*")
+      .eq("id", requestId)
+      .single();
+
+    if (fetchError || !signupRequest) {
+      return NextResponse.json(
+        { success: false, error: "Signup request not found" },
+        { status: 404 }
+      );
+    }
+
+    // Update signup request status
+    const { error: updateError } = await supabaseAdmin
       .from("signup_requests")
       .update({
         status,
-        reviewed_at: new Date().toISOString(),
-        reviewed_by: session.user.id,
+        updated_at: new Date().toISOString(),
       })
-      .eq("id", requestId)
-      .select("user_id")
-      .single();
+      .eq("id", requestId);
 
-    if (requestError) {
-      throw requestError;
+    if (updateError) {
+      throw updateError;
     }
 
-    // Update user profile status
-    const { error: profileError } = await supabaseAdmin
-      .from("user_profiles")
-      .update({ status })
-      .eq("id", signupData.user_id);
+    if (status === "approved") {
+      // Update user profile status to approved
+      const { error: profileUpdateError } = await supabaseAdmin
+        .from("user_profiles")
+        .update({ status: "approved" })
+        .eq("id", signupRequest.user_id);
 
-    if (profileError) {
-      throw profileError;
+      if (profileUpdateError) {
+        throw profileUpdateError;
+      }
     }
 
     return NextResponse.json({
       success: true,
-      message: `Registration ${status} successfully`,
+      message: `Request ${status} successfully`,
     });
   } catch (error) {
-    console.error("Update signup status error:", error);
+    console.error("Process signup request error:", error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }

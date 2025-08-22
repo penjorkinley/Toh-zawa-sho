@@ -13,7 +13,7 @@ import {
   AlertCircle,
   RefreshCw,
 } from "lucide-react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createSupabaseClient } from "@/lib/supabase/client";
 
 // Interface for dashboard data
 interface DashboardData {
@@ -44,7 +44,7 @@ export default function SuperAdminDashboardPage() {
   const [apiTimeout, setApiTimeout] = useState(false);
 
   // Create supabase client for auth operations
-  const supabase = createClientComponentClient();
+  const supabase = createSupabaseClient();
 
   // Fetch dashboard data on component mount
   useEffect(() => {
