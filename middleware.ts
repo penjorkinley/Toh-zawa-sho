@@ -30,6 +30,39 @@ export async function middleware(request: NextRequest) {
   // Get the pathname from the URL
   const path = request.nextUrl.pathname;
 
+  // CRITICAL FIX: Early return for ALL static assets and images
+  // This ensures no authentication checks run on any static files
+  if (
+    path.startsWith("/_next/") || // Next.js static files
+    path.startsWith("/images/") || // Images folder
+    path.startsWith("/icons/") || // Icons folder
+    path.startsWith("/static/") || // Static files
+    path.startsWith("/public/") || // Public folder
+    path.includes("/favicon") || // Favicon files
+    path.endsWith(".svg") || // SVG files
+    path.endsWith(".png") || // PNG files
+    path.endsWith(".jpg") || // JPG files
+    path.endsWith(".jpeg") || // JPEG files
+    path.endsWith(".gif") || // GIF files
+    path.endsWith(".webp") || // WebP files
+    path.endsWith(".ico") || // Icon files
+    path.endsWith(".css") || // CSS files
+    path.endsWith(".js") || // JavaScript files
+    path.endsWith(".woff") || // Font files
+    path.endsWith(".woff2") || // Font files
+    path.endsWith(".ttf") || // Font files
+    path.endsWith(".eot") || // Font files
+    path.endsWith(".json") || // JSON files
+    path.endsWith(".xml") || // XML files
+    path.endsWith(".txt") || // Text files
+    path.endsWith(".pdf") || // PDF files
+    // Specific files from your app
+    path === "/restaurant-illustration.svg" || // Landing page illustration
+    path === "/auth-bg-img.svg" // Auth background
+  ) {
+    return response;
+  }
+
   // Check if it's a public route - if so, allow access
   if (
     publicRoutes.some((route) => path === route || path.startsWith(`${route}/`))
@@ -116,7 +149,7 @@ export async function middleware(request: NextRequest) {
   return response;
 }
 
-// Only run middleware on matching paths, but exclude static files and images
+// FIXED CONFIG: Properly exclude all static assets from middleware processing
 export const config = {
   matcher: [
     /*
@@ -124,9 +157,8 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - public (public files)
-     * - auth-bg-img.svg (your auth background image)
+     * And exclude all common static file extensions
      */
-    "/((?!_next/static|_next/image|favicon.ico|public|auth-bg-img.svg).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|eot|json|xml|txt|pdf)$).*)",
   ],
 };
