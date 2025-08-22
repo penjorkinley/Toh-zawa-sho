@@ -9,6 +9,7 @@ import AuthLayout from "@/components/auth/AuthLayout";
 import FormContainer from "@/components/auth/FormContainer";
 import InputField from "@/components/ui/InputField";
 import { Button } from "@/components/ui/shadcn-button";
+import toast from "react-hot-toast";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -33,6 +34,9 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
 
+    // Show loading toast
+    const loadingToast = toast.loading("Signing you in...");
+
     try {
       // Determine if input is email or phone
       const isEmail = formData.emailOrPhone.includes("@");
@@ -47,6 +51,8 @@ export default function LoginPage() {
           .single();
 
         if (!profile) {
+          toast.dismiss(loadingToast);
+          toast.error("No account found with this phone number");
           setError("No account found with this phone number");
           setLoading(false);
           return;
@@ -54,6 +60,8 @@ export default function LoginPage() {
 
         // For phone login, we'd need to get the email from a server-side admin call
         // For now, ask users to use email
+        toast.dismiss(loadingToast);
+        toast.error("Please login with your email address");
         setError("Please login with your email address");
         setLoading(false);
         return;
@@ -68,12 +76,16 @@ export default function LoginPage() {
       );
 
       if (authError) {
+        toast.dismiss(loadingToast);
+        toast.error(authError.message || "Invalid credentials");
         setError(authError.message);
         setLoading(false);
         return;
       }
 
       if (!data.user) {
+        toast.dismiss(loadingToast);
+        toast.error("Login failed. Please try again.");
         setError("Login failed. Please try again.");
         setLoading(false);
         return;
@@ -88,6 +100,8 @@ export default function LoginPage() {
 
       if (profileError) {
         console.error("Profile fetch error:", profileError);
+        toast.dismiss(loadingToast);
+        toast.error("Failed to fetch user profile");
         setError("Failed to fetch user profile");
         setLoading(false);
         return;
@@ -96,10 +110,16 @@ export default function LoginPage() {
       // Check if user is approved
       if (profile.status !== "approved") {
         await supabase.auth.signOut();
+        toast.dismiss(loadingToast);
+        toast.error("Your account is still pending approval");
         setError("Your account is still pending approval");
         setLoading(false);
         return;
       }
+
+      // Success! Show success toast
+      toast.dismiss(loadingToast);
+      toast.success("Welcome back! Redirecting...");
 
       // Determine redirect based on role and first login
       let redirectUrl = "/";
@@ -112,10 +132,14 @@ export default function LoginPage() {
         redirectUrl = "/owner-dashboard/menu-setup";
       }
 
-      // Use router.push for client-side navigation
-      router.push(redirectUrl);
+      // Small delay to show success message, then redirect
+      setTimeout(() => {
+        router.push(redirectUrl);
+      }, 1000);
     } catch (err) {
       console.error("Login error:", err);
+      toast.dismiss(loadingToast);
+      toast.error("An unexpected error occurred. Please try again.");
       setError("An unexpected error occurred. Please try again.");
       setLoading(false);
     }
@@ -170,7 +194,14 @@ export default function LoginPage() {
           </Link>
 
           <Button type="submit" disabled={loading} className="w-full">
-            {loading ? "Logging in..." : "Login"}
+            {loading ? (
+              <>
+                <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                Signing in...
+              </>
+            ) : (
+              "Login"
+            )}
           </Button>
 
           <p className="text-center mt-6 text-sm text-gray-600">
