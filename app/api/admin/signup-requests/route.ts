@@ -11,12 +11,12 @@ export async function GET(request: NextRequest) {
     // Create server client with proper Next.js 15 compatibility
     const supabase = await createSupabaseServerClient();
 
-    // Verify user is authenticated
+    // Verify user is authenticated (more secure than getSession)
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!session) {
+    if (!user) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
         { status: 401 }
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const { data: profile } = await supabaseAdmin
       .from("user_profiles")
       .select("role, status")
-      .eq("id", session.user.id)
+      .eq("id", user.id)
       .single();
 
     if (
@@ -83,12 +83,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify user is authenticated
+    // Verify user is authenticated (more secure than getSession)
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!session) {
+    if (!user) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
         { status: 401 }
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
     const { data: profile } = await supabaseAdmin
       .from("user_profiles")
       .select("role, status")
-      .eq("id", session.user.id)
+      .eq("id", user.id)
       .single();
 
     if (

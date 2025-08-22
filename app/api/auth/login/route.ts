@@ -58,11 +58,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Use the authenticated user from signInWithPassword (already verified)
+    const userId = authData.user.id;
+
     // Get user profile
     const { data: profile, error: profileError } = await supabase
       .from("user_profiles")
       .select("*")
-      .eq("id", authData.user.id)
+      .eq("id", userId)
       .single();
 
     if (profileError) {

@@ -90,13 +90,13 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // Refresh session if available
+  // Get authenticated user (more secure than getSession)
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  // If no session and trying to access protected route, redirect to login
-  if (!session) {
+  // If no user and trying to access protected route, redirect to login
+  if (!user) {
     // Allow api routes to return their own unauthorized responses
     if (path.startsWith("/api/")) {
       return response;
@@ -110,7 +110,7 @@ export async function middleware(request: NextRequest) {
   const { data: profile } = await supabase
     .from("user_profiles")
     .select("role, status, first_login")
-    .eq("id", session.user.id)
+    .eq("id", user.id)
     .single();
 
   // Allow information-setup access for all users with first_login=true
