@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/shadcn-button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import RegistrationDetailModal from "@/components/restaurant-details-modal/registration-detail-modal";
+import toast from "react-hot-toast";
 import {
   Eye,
   Check,
@@ -14,7 +15,6 @@ import {
   Clock,
   Mail,
   Phone,
-  MapPin,
   Calendar,
   Loader2,
   AlertTriangle,
@@ -43,17 +43,10 @@ interface ModalPendingRegistration {
   email: string;
   phone: string;
   businessType: string;
-  location: string;
   submittedDate: string;
   licenseDocument: string;
   coverPhoto?: string;
   logo?: string;
-  description: string;
-  openingHours: {
-    days: string[];
-    openTime: string;
-    closeTime: string;
-  };
 }
 
 export default function PendingRegistrationsPage() {
@@ -98,9 +91,21 @@ export default function PendingRegistrationsPage() {
   };
 
   const handleApprove = async (id: string) => {
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      "Are you sure you want to approve this registration? This will activate their account and they will be able to access the platform."
+    );
+
+    if (!confirmed) return;
+
+    let loadingToast: string | undefined;
+
     try {
       setActionLoading(id);
       setError(null);
+
+      // Show loading toast
+      loadingToast = toast.loading("Approving registration...");
 
       const response = await fetch("/api/admin/signup-requests", {
         method: "POST",
@@ -128,11 +133,18 @@ export default function PendingRegistrationsPage() {
           closeModal();
         }
 
-        // Show success message (you can implement toast notifications)
-        console.log("Registration approved successfully");
+        // Show success toast
+        toast.dismiss(loadingToast);
+        toast.success("Registration approved successfully!");
       }
     } catch (err) {
       console.error("Error approving registration:", err);
+      if (loadingToast) {
+        toast.dismiss(loadingToast);
+      }
+      toast.error(
+        err instanceof Error ? err.message : "Failed to approve registration"
+      );
       setError(
         err instanceof Error ? err.message : "Failed to approve registration"
       );
@@ -142,9 +154,21 @@ export default function PendingRegistrationsPage() {
   };
 
   const handleReject = async (id: string) => {
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      "Are you sure you want to reject this registration? This action cannot be undone and the applicant will need to reapply."
+    );
+
+    if (!confirmed) return;
+
+    let loadingToast: string | undefined;
+
     try {
       setActionLoading(id);
       setError(null);
+
+      // Show loading toast
+      loadingToast = toast.loading("Rejecting registration...");
 
       const response = await fetch("/api/admin/signup-requests", {
         method: "POST",
@@ -172,11 +196,18 @@ export default function PendingRegistrationsPage() {
           closeModal();
         }
 
-        // Show success message
-        console.log("Registration rejected successfully");
+        // Show success toast
+        toast.dismiss(loadingToast);
+        toast.success("Registration rejected successfully.");
       }
     } catch (err) {
       console.error("Error rejecting registration:", err);
+      if (loadingToast) {
+        toast.dismiss(loadingToast);
+      }
+      toast.error(
+        err instanceof Error ? err.message : "Failed to reject registration"
+      );
       setError(
         err instanceof Error ? err.message : "Failed to reject registration"
       );
@@ -192,21 +223,14 @@ export default function PendingRegistrationsPage() {
     return {
       id: dbRegistration.id,
       businessName: dbRegistration.business_name,
-      ownerName: dbRegistration.business_name + " Owner", // You can improve this
+      ownerName: dbRegistration.business_name + " Owner",
       email: dbRegistration.email,
       phone: dbRegistration.phone_number,
-      businessType: "Restaurant", // Default since we don't have this in signup yet
-      location: "Location not provided", // Default since we don't have this in signup yet
+      businessType: "Restaurant",
       submittedDate: new Date(dbRegistration.created_at).toLocaleDateString(),
       licenseDocument: dbRegistration.business_license_url || "",
       coverPhoto: undefined,
       logo: undefined,
-      description: "Description not provided",
-      openingHours: {
-        days: [],
-        openTime: "",
-        closeTime: "",
-      },
     };
   };
 
@@ -313,26 +337,17 @@ export default function PendingRegistrationsPage() {
               className="hover:shadow-md transition-shadow"
             >
               <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
                     <Avatar className="h-12 w-12">
-                      <AvatarFallback>
-                        {registration.business_name
-                          .substring(0, 2)
-                          .toUpperCase()}
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {registration.business_name?.charAt(0) || "?"}
                       </AvatarFallback>
                     </Avatar>
-
-                    <div className="space-y-2">
-                      <div>
-                        <h3 className="text-lg font-semibold">
-                          {registration.business_name}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          by {registration.business_name} Owner
-                        </p>
-                      </div>
-
+                    <div className="space-y-1">
+                      <h3 className="font-semibold text-lg">
+                        {registration.business_name}
+                      </h3>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <Mail className="h-3 w-3" />
@@ -342,19 +357,12 @@ export default function PendingRegistrationsPage() {
                           <Phone className="h-3 w-3" />
                           {registration.phone_number}
                         </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary">Restaurant</Badge>
-                        <Badge variant="outline">
-                          <Calendar className="h-3 w-3 mr-1" />
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
                           {new Date(
                             registration.created_at
                           ).toLocaleDateString()}
-                        </Badge>
-                        {registration.business_license_url && (
-                          <Badge variant="outline">📄 License Uploaded</Badge>
-                        )}
+                        </div>
                       </div>
                     </div>
                   </div>
