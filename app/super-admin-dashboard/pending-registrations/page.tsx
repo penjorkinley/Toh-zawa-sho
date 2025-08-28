@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/shadcn-button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import RegistrationDetailModal from "@/components/restaurant-details-modal/registration-detail-modal";
+import RejectionReasonModal from "@/components/rejection-reason-modal";
 import toast from "react-hot-toast";
 import {
   Eye,
@@ -18,6 +19,8 @@ import {
   Calendar,
   Loader2,
   AlertTriangle,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 
 // Database interface (from your API)
@@ -60,6 +63,12 @@ export default function PendingRegistrationsPage() {
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
+  // Rejection modal state
+  const [rejectionModalOpen, setRejectionModalOpen] = useState(false);
+  const [rejectionTarget, setRejectionTarget] = useState<SignupRequest | null>(
+    null
+  );
+
   // Fetch pending registrations
   useEffect(() => {
     fetchPendingRegistrations();
@@ -91,9 +100,12 @@ export default function PendingRegistrationsPage() {
   };
 
   const handleApprove = async (id: string) => {
+    const registration = pendingRegistrations.find((reg) => reg.id === id);
+    if (!registration) return;
+
     // Show confirmation dialog
     const confirmed = window.confirm(
-      "Are you sure you want to approve this registration? This will activate their account and they will be able to access the platform."
+      `Are you sure you want to approve ${registration.business_name}'s registration? This will activate their account and send them a welcome email.`
     );
 
     if (!confirmed) return;
@@ -105,7 +117,9 @@ export default function PendingRegistrationsPage() {
       setError(null);
 
       // Show loading toast
-      loadingToast = toast.loading("Approving registration...");
+      loadingToast = toast.loading(
+        "Approving registration and sending email..."
+      );
 
       const response = await fetch("/api/admin/signup-requests", {
         method: "POST",
@@ -133,9 +147,15 @@ export default function PendingRegistrationsPage() {
           closeModal();
         }
 
-        // Show success toast
+        // Show success toast with email status
         toast.dismiss(loadingToast);
-        toast.success("Registration approved successfully!");
+        if (result.emailSent) {
+          toast.success("✅ Registration approved and welcome email sent!");
+        } else {
+          toast.success(
+            "✅ Registration approved! (Email notification failed)"
+          );
+        }
       }
     } catch (err) {
       console.error("Error approving registration:", err);
@@ -153,22 +173,24 @@ export default function PendingRegistrationsPage() {
     }
   };
 
-  const handleReject = async (id: string) => {
-    // Show confirmation dialog
-    const confirmed = window.confirm(
-      "Are you sure you want to reject this registration? This action cannot be undone and the applicant will need to reapply."
-    );
+  const initiateReject = (registration: SignupRequest) => {
+    setRejectionTarget(registration);
+    setRejectionModalOpen(true);
+  };
 
-    if (!confirmed) return;
+  const handleRejectConfirm = async (rejectionReason?: string) => {
+    if (!rejectionTarget) return;
 
     let loadingToast: string | undefined;
 
     try {
-      setActionLoading(id);
+      setActionLoading(rejectionTarget.id);
       setError(null);
 
       // Show loading toast
-      loadingToast = toast.loading("Rejecting registration...");
+      loadingToast = toast.loading(
+        "Rejecting registration and sending notification..."
+      );
 
       const response = await fetch("/api/admin/signup-requests", {
         method: "POST",
@@ -176,8 +198,9 @@ export default function PendingRegistrationsPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          requestId: id,
+          requestId: rejectionTarget.id,
           status: "rejected",
+          rejectionReason,
         }),
       });
 
@@ -189,16 +212,28 @@ export default function PendingRegistrationsPage() {
 
       if (result.success) {
         // Remove from pending list
-        setPendingRegistrations((prev) => prev.filter((reg) => reg.id !== id));
+        setPendingRegistrations((prev) =>
+          prev.filter((reg) => reg.id !== rejectionTarget.id)
+        );
 
-        // Close modal if this request was being reviewed
-        if (selectedRegistration?.id === id) {
+        // Close modals
+        setRejectionModalOpen(false);
+        setRejectionTarget(null);
+        if (selectedRegistration?.id === rejectionTarget.id) {
           closeModal();
         }
 
-        // Show success toast
+        // Show success toast with email status
         toast.dismiss(loadingToast);
-        toast.success("Registration rejected successfully.");
+        if (result.emailSent) {
+          toast.success(
+            "✅ Registration rejected and notification email sent."
+          );
+        } else {
+          toast.success(
+            "✅ Registration rejected. (Email notification failed)"
+          );
+        }
       }
     } catch (err) {
       console.error("Error rejecting registration:", err);
@@ -214,6 +249,11 @@ export default function PendingRegistrationsPage() {
     } finally {
       setActionLoading(null);
     }
+  };
+
+  const handleRejectCancel = () => {
+    setRejectionModalOpen(false);
+    setRejectionTarget(null);
   };
 
   // Transform database data to modal format
@@ -248,18 +288,30 @@ export default function PendingRegistrationsPage() {
   if (loading) {
     return (
       <div className="p-6 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Pending Registrations
-          </h1>
-          <p className="text-muted-foreground">
-            Review and approve restaurant registration requests
-          </p>
-        </div>
-
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <span className="ml-2">Loading pending registrations...</span>
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <span className="ml-2 text-gray-600">
+            Loading pending registrations...
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-center py-12 text-center">
+          <div className="space-y-3">
+            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto" />
+            <h3 className="text-lg font-medium text-gray-900">
+              Error Loading Data
+            </h3>
+            <p className="text-gray-600">{error}</p>
+            <Button onClick={fetchPendingRegistrations} className="mt-4">
+              Try Again
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -268,70 +320,36 @@ export default function PendingRegistrationsPage() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">
-          Pending Registrations
-        </h1>
-        <p className="text-muted-foreground">
-          Review and approve restaurant registration requests
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Pending Registrations
+          </h1>
+          <p className="text-gray-600">
+            Review and approve new restaurant registrations
+          </p>
+        </div>
+        <Badge variant="secondary" className="text-sm">
+          {pendingRegistrations.length} pending
+        </Badge>
       </div>
 
-      {/* Error Alert */}
-      {error && (
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-red-800">
-              <AlertTriangle className="h-4 w-4" />
-              <span className="font-medium">Error:</span>
-              <span>{error}</span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={fetchPendingRegistrations}
-                className="ml-auto"
-              >
-                Retry
-              </Button>
-            </div>
+      {/* Registrations List */}
+      {pendingRegistrations.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              All caught up!
+            </h3>
+            <p className="text-gray-600">
+              There are no pending registrations to review at the moment.
+            </p>
           </CardContent>
         </Card>
-      )}
-
-      {/* Stats */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Registration Queue
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <div className="text-2xl font-bold text-orange-600">
-              {pendingRegistrations.length}
-            </div>
-            <span className="text-sm text-muted-foreground">
-              registrations awaiting review
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Pending Registrations List */}
-      <div className="grid gap-4">
-        {pendingRegistrations.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-8">
-              <Check className="h-8 w-8 text-green-500 mb-2" />
-              <h3 className="text-lg font-semibold">All caught up!</h3>
-              <p className="text-muted-foreground text-center">
-                No pending registrations to review at the moment.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          pendingRegistrations.map((registration) => (
+      ) : (
+        <div className="grid gap-6">
+          {pendingRegistrations.map((registration) => (
             <Card
               key={registration.id}
               className="hover:shadow-md transition-shadow"
@@ -340,86 +358,110 @@ export default function PendingRegistrationsPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <Avatar className="h-12 w-12">
-                      <AvatarFallback className="bg-primary/10 text-primary">
-                        {registration.business_name?.charAt(0) || "?"}
+                      <AvatarImage src="" />
+                      <AvatarFallback className="bg-blue-100 text-blue-600 font-medium">
+                        {registration.business_name.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="space-y-1">
-                      <h3 className="font-semibold text-lg">
+                    <div>
+                      <h3 className="font-semibold text-gray-900">
                         {registration.business_name}
                       </h3>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          {registration.email}
+                      <div className="flex items-center space-x-4 text-sm text-gray-600">
+                        <div className="flex items-center space-x-1">
+                          <Mail className="h-4 w-4" />
+                          <span>{registration.email}</span>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Phone className="h-3 w-3" />
-                          {registration.phone_number}
+                        <div className="flex items-center space-x-1">
+                          <Phone className="h-4 w-4" />
+                          <span>{registration.phone_number}</span>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {new Date(
-                            registration.created_at
-                          ).toLocaleDateString()}
+                        <div className="flex items-center space-x-1">
+                          <Calendar className="h-4 w-4" />
+                          <span>
+                            {new Date(
+                              registration.created_at
+                            ).toLocaleDateString()}
+                          </span>
                         </div>
                       </div>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center space-x-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => openModal(registration)}
-                      disabled={!!actionLoading}
+                      className="flex items-center space-x-1"
                     >
-                      <Eye className="h-4 w-4 mr-1" />
-                      Review
+                      <Eye className="h-4 w-4" />
+                      <span>View Details</span>
                     </Button>
-
                     <Button
+                      variant="outline"
                       size="sm"
-                      className="bg-green-600 hover:bg-green-700"
                       onClick={() => handleApprove(registration.id)}
                       disabled={!!actionLoading}
+                      className="flex items-center space-x-1 text-green-600 border-green-600 hover:bg-green-50"
                     >
                       {actionLoading === registration.id ? (
-                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        <Check className="h-4 w-4 mr-1" />
+                        <CheckCircle className="h-4 w-4" />
                       )}
-                      Approve
+                      <span>Approve</span>
                     </Button>
-
                     <Button
-                      variant="destructive"
+                      variant="outline"
                       size="sm"
-                      onClick={() => handleReject(registration.id)}
+                      onClick={() => initiateReject(registration)}
                       disabled={!!actionLoading}
+                      className="flex items-center space-x-1 text-red-600 border-red-600 hover:bg-red-50"
                     >
                       {actionLoading === registration.id ? (
-                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        <X className="h-4 w-4 mr-1" />
+                        <XCircle className="h-4 w-4" />
                       )}
-                      Reject
+                      <span>Reject</span>
                     </Button>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Registration Detail Modal */}
-      <RegistrationDetailModal
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        registration={selectedRegistration}
-        onApprove={handleApprove}
-        onReject={handleReject}
+      {isModalOpen && selectedRegistration && (
+        <RegistrationDetailModal
+          registration={selectedRegistration}
+          isOpen={isModalOpen}
+          onClose={closeModal}
+          onApprove={(id) => {
+            closeModal();
+            handleApprove(id);
+          }}
+          onReject={(id) => {
+            const dbRegistration = pendingRegistrations.find(
+              (reg) => reg.id === id
+            );
+            if (dbRegistration) {
+              closeModal();
+              initiateReject(dbRegistration);
+            }
+          }}
+        />
+      )}
+
+      {/* Rejection Reason Modal */}
+      <RejectionReasonModal
+        isOpen={rejectionModalOpen}
+        onClose={handleRejectCancel}
+        onConfirm={handleRejectConfirm}
+        businessName={rejectionTarget?.business_name || ""}
+        loading={!!actionLoading}
       />
     </div>
   );
