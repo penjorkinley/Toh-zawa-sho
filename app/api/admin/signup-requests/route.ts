@@ -1,4 +1,4 @@
-// app/api/admin/signup-requests/route.ts
+// app/api/admin/signup-requests/route.ts - Approach 1: Auto-delete on rejection
 import { sendApprovalEmail, sendRejectionEmail } from "@/lib/email/service";
 import {
   createSupabaseServerClient,
@@ -9,10 +9,8 @@ import { NextRequest, NextResponse } from "next/server";
 // Get pending signup requests
 export async function GET(request: NextRequest) {
   try {
-    // Create server client with proper Next.js 15 compatibility
     const supabase = await createSupabaseServerClient();
 
-    // Verify user is authenticated (more secure than getSession)
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -69,10 +67,9 @@ export async function GET(request: NextRequest) {
 // Approve or reject signup request
 export async function POST(request: NextRequest) {
   try {
-    // Create server client with proper Next.js 15 compatibility
     const supabase = await createSupabaseServerClient();
 
-    // Parse request body with proper typing
+    // Parse request body
     const body = await request.json();
     const requestId = body.requestId as string;
     const status = body.status as "approved" | "rejected";
@@ -85,7 +82,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify user is authenticated (more secure than getSession)
+    // Verify user is authenticated
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -115,7 +112,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get the signup request details BEFORE updating (we need email and business_name)
+    // Get signup request details BEFORE updating
     const { data: signupRequest, error: fetchError } = await supabaseAdmin
       .from("signup_requests")
       .select("*")
@@ -148,19 +145,42 @@ export async function POST(request: NextRequest) {
       })
       .eq("id", requestId);
 
-    if (updateError) {
-      throw updateError;
-    }
+    if (updateError) throw updateError;
 
-    // Update user profile status if approved
+    let userDeleted = false;
+
+    // Handle approval or rejection
     if (status === "approved") {
+      // Update user profile to approved
       const { error: profileUpdateError } = await supabaseAdmin
         .from("user_profiles")
         .update({ status: "approved" })
         .eq("id", signupRequest.user_id);
 
-      if (profileUpdateError) {
-        throw profileUpdateError;
+      if (profileUpdateError) throw profileUpdateError;
+    } else if (status === "rejected") {
+      // APPROACH 1: Always delete user on rejection
+      try {
+        console.log(
+          `🗑️ Deleting rejected user: ${signupRequest.email} (${signupRequest.business_name})`
+        );
+
+        const { error: deleteError } =
+          await supabaseAdmin.auth.admin.deleteUser(signupRequest.user_id);
+
+        if (deleteError) {
+          console.error("❌ Failed to delete user:", deleteError);
+          throw new Error("Failed to delete user account");
+        }
+
+        userDeleted = true;
+        console.log(
+          `✅ User ${signupRequest.email} deleted successfully. They can now re-register immediately.`
+        );
+      } catch (deleteErr) {
+        console.error("User deletion failed:", deleteErr);
+        // Don't fail the whole operation, but log the issue
+        throw new Error("Failed to delete user account after rejection");
       }
     }
 
@@ -180,10 +200,9 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Log email result but don't fail the whole operation if email fails
+      // Log email result
       if (emailResult && !emailResult.success) {
         console.error("Failed to send notification email:", emailResult.error);
-        // You could optionally store this failure in a separate email_logs table
       } else if (emailResult && emailResult.success) {
         console.log(
           "✅ Notification email sent successfully to:",
@@ -191,7 +210,6 @@ export async function POST(request: NextRequest) {
         );
       }
     } catch (emailError) {
-      // Log email error but don't fail the operation
       console.error("Email sending error:", emailError);
     }
 
@@ -199,6 +217,8 @@ export async function POST(request: NextRequest) {
       success: true,
       message: `Request ${status} successfully`,
       emailSent: emailResult?.success || false,
+      userDeleted,
+      canReregisterImmediately: userDeleted,
     });
   } catch (error) {
     console.error("Process signup request error:", error);

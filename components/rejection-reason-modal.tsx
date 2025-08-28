@@ -1,9 +1,9 @@
-// components/rejection-reason-modal.tsx
+// components/rejection-reason-modal.tsx - Approach 1: Auto-delete version
 "use client";
 
 import { useState } from "react";
 import { Button } from "@/components/ui/shadcn-button";
-import { X } from "lucide-react";
+import { X, Trash2 } from "lucide-react";
 
 interface RejectionReasonModalProps {
   isOpen: boolean;
@@ -149,11 +149,11 @@ export default function RejectionReasonModal({
               : "Write custom reason"}
           </button>
 
-          {/* Option to reject without reason */}
+          {/* Info about rejection */}
           <div className="pt-2 border-t border-gray-100">
             <p className="text-xs text-gray-500">
-              You can also reject without providing a specific reason by
-              clicking "Reject" below.
+              The user will receive an email with your feedback and can apply
+              again immediately after account deletion.
             </p>
           </div>
         </div>
@@ -173,7 +173,7 @@ export default function RejectionReasonModal({
             disabled={loading}
             className="flex-1 bg-red-600 hover:bg-red-700 text-white"
           >
-            {loading ? "Rejecting..." : "Reject Registration"}
+            {loading ? "Rejecting..." : "Reject"}
           </Button>
         </div>
       </div>

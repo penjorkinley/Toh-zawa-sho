@@ -1,4 +1,4 @@
-// app/super-admin-dashboard/pending-registrations/page.tsx
+// app/super-admin-dashboard/pending-registrations/page.tsx - Approach 1: Auto-delete
 "use client";
 
 import { useState, useEffect } from "react";
@@ -187,9 +187,9 @@ export default function PendingRegistrationsPage() {
       setActionLoading(rejectionTarget.id);
       setError(null);
 
-      // Show loading toast
+      // Show loading toast with auto-delete info
       loadingToast = toast.loading(
-        "Rejecting registration and sending notification..."
+        "Rejecting registration, sending email, and deleting user account..."
       );
 
       const response = await fetch("/api/admin/signup-requests", {
@@ -223,17 +223,24 @@ export default function PendingRegistrationsPage() {
           closeModal();
         }
 
-        // Show success toast with email status
+        // Show success toast with comprehensive status
         toast.dismiss(loadingToast);
+
+        let successMessage = "✅ Registration rejected";
+
         if (result.emailSent) {
-          toast.success(
-            "✅ Registration rejected and notification email sent."
-          );
-        } else {
-          toast.success(
-            "✅ Registration rejected. (Email notification failed)"
-          );
+          successMessage += ", email sent";
         }
+
+        if (result.userDeleted) {
+          successMessage +=
+            ", and user deleted. They can re-register immediately!";
+        } else {
+          successMessage +=
+            ". (User deletion failed - manual cleanup may be needed)";
+        }
+
+        toast.success(successMessage, { duration: 5000 });
       }
     } catch (err) {
       console.error("Error rejecting registration:", err);
@@ -329,9 +336,11 @@ export default function PendingRegistrationsPage() {
             Review and approve new restaurant registrations
           </p>
         </div>
-        <Badge variant="secondary" className="text-sm">
-          {pendingRegistrations.length} pending
-        </Badge>
+        <div className="flex items-center space-x-3">
+          <Badge variant="secondary" className="text-sm">
+            {pendingRegistrations.length} pending
+          </Badge>
+        </div>
       </div>
 
       {/* Registrations List */}
