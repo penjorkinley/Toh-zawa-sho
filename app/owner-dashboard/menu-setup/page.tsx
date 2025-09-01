@@ -1,3 +1,4 @@
+// app/owner-dashboard/menu-setup/page.tsx (Updated Integration)
 "use client";
 
 import CategoryTemplateSelector from "@/components/menu-setup/CategoryTemplateSelector";
@@ -10,8 +11,15 @@ import {
   CATEGORY_TEMPLATES,
   type CategoryTemplate,
 } from "@/lib/data/menu-templates";
-import { Plus } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import * as React from "react";
+import {
+  checkMenuSetupStatus,
+  completeMenuSetup,
+  getCompleteMenu,
+} from "@/lib/actions/menu/actions";
+import { MenuSetupData } from "@/lib/types/menu-management";
+import { useRouter } from "next/navigation";
 
 // Consistent interface definition matching all components
 interface SelectedCategory {
@@ -27,6 +35,7 @@ interface SelectedCategory {
 }
 
 export default function MenuSetupPage() {
+  const router = useRouter();
   const [currentStep, setCurrentStep] = React.useState<
     "template" | "items" | "review" | "manage"
   >("template");
@@ -34,6 +43,9 @@ export default function MenuSetupPage() {
     SelectedCategory[]
   >([]);
   const [isQuickSetup, setIsQuickSetup] = React.useState(true);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [isMenuAlreadySetup, setIsMenuAlreadySetup] = React.useState(false);
 
   // For manual category management
   const [manualCategories, setManualCategories] = React.useState<
@@ -44,6 +56,76 @@ export default function MenuSetupPage() {
       isEditing?: boolean;
     }>
   >([]);
+
+  // State for complete menu data (categories with items)
+  const [completeMenuData, setCompleteMenuData] = React.useState<
+    Array<{
+      id: string;
+      name: string;
+      items: Array<{
+        id: string;
+        name: string;
+        description?: string;
+        image_url?: string;
+        is_available: boolean;
+        is_vegetarian: boolean;
+        has_multiple_sizes: boolean;
+        sizes?: Array<{
+          id: string;
+          size_name: string;
+          price: number;
+        }>;
+      }>;
+    }>
+  >([]);
+
+  // Check menu setup status on component mount
+  React.useEffect(() => {
+    async function checkSetupStatus() {
+      try {
+        setIsLoading(true);
+        console.log("🔍 Checking menu setup status...");
+        const result = await checkMenuSetupStatus();
+        console.log("📊 Setup status result:", result);
+
+        if (result.success && result.isSetupComplete) {
+          setIsMenuAlreadySetup(true);
+          setIsQuickSetup(false);
+          setCurrentStep("manage");
+
+          // Load existing menu data WITH items
+          console.log("📋 Loading complete menu...");
+          const menuResult = await getCompleteMenu();
+          console.log("📋 Complete menu result:", menuResult);
+
+          if (menuResult.success && menuResult.categories) {
+            // Store complete menu data for CategoryCard
+            setCompleteMenuData(menuResult.categories);
+
+            // Convert to simple format for management state
+            const convertedCategories = menuResult.categories.map(
+              (category) => ({
+                id: category.id,
+                title: category.name,
+                isOpen: false,
+                isEditing: false,
+              })
+            );
+            console.log("🏷️ Converted categories:", convertedCategories);
+            setManualCategories(convertedCategories);
+          }
+        } else {
+          console.log("🆕 Menu not setup yet, showing template flow");
+        }
+      } catch (error) {
+        console.error("❌ Error checking menu setup status:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    checkSetupStatus();
+  }, []);
 
   const progress = React.useMemo(() => {
     switch (currentStep) {
@@ -81,6 +163,7 @@ export default function MenuSetupPage() {
       )
     );
   };
+
   const handleUpdateCategory = (
     categoryId: string,
     updatedCategory: SelectedCategory
@@ -93,38 +176,125 @@ export default function MenuSetupPage() {
   };
 
   const handleSaveCategory = (categoryId: string, newTitle: string) => {
-    setManualCategories((categories) =>
-      categories.map((category) =>
-        category.id === categoryId
-          ? { ...category, title: newTitle, isEditing: false }
-          : category
-      )
-    );
+    console.log("💾 handleSaveCategory called:", { categoryId, newTitle });
+
+    // This should only update local state, not create database entries
+    // Database creation is handled by CategoryCard component
+    if (categoryId.startsWith("temp-")) {
+      console.log(
+        "🏷️ This is a temporary category, CategoryCard will handle database creation"
+      );
+      // Remove the temporary category from local state - CategoryCard will refresh the page
+      setManualCategories((categories) =>
+        categories.filter((category) => category.id !== categoryId)
+      );
+    } else {
+      console.log("📝 Updating existing category title in local state");
+      setManualCategories((categories) =>
+        categories.map((category) =>
+          category.id === categoryId
+            ? { ...category, title: newTitle, isEditing: false }
+            : category
+        )
+      );
+    }
   };
 
-  const handleFinishSetup = () => {
-    // Convert selected categories to the format expected by manual management
-    const convertedCategories = selectedCategories
-      .filter((cat) => cat.selectedItems.length > 0)
-      .map((cat) => ({
-        id: `category-${Date.now()}-${Math.random()}`,
-        title: cat.template.name,
-        isOpen: false,
-      }));
+  // Updated handleFinishSetup to fetch fresh data from database
+  const handleFinishSetup = async () => {
+    try {
+      setIsSaving(true);
 
-    setManualCategories(convertedCategories);
-    setCurrentStep("manage");
-    setIsQuickSetup(false);
+      // Convert selectedCategories to MenuSetupData format
+      const setupData: MenuSetupData = {
+        categories: selectedCategories
+          .filter((cat) => cat.selectedItems.length > 0)
+          .map((cat) => ({
+            template_id: cat.template.id,
+            name: cat.template.name,
+            description: cat.template.description,
+            items: cat.selectedItems.map((item) => ({
+              name: item.name,
+              description: item.description,
+              price: item.price,
+              image_url: item.image,
+              is_vegetarian: false, // You may want to add this field to your UI
+              template_item_id: item.isCustom
+                ? undefined
+                : `${cat.template.id}-${item.name}`,
+              is_custom: item.isCustom || false,
+            })),
+          })),
+      };
+
+      console.log("💾 Saving menu setup data:", setupData);
+      const result = await completeMenuSetup(setupData);
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to save menu");
+      }
+
+      console.log("✅ Menu setup saved successfully");
+
+      // 🔥 KEY FIX: Fetch fresh data from database instead of using frontend state
+      console.log("📋 Fetching fresh menu data from database...");
+      const menuResult = await getCompleteMenu();
+
+      if (menuResult.success && menuResult.categories) {
+        console.log("📋 Fresh menu data:", menuResult.categories);
+
+        // Store complete menu data for CategoryCard (with items!)
+        setCompleteMenuData(menuResult.categories);
+
+        // Convert to simple format for management state using REAL database IDs
+        const convertedCategories = menuResult.categories.map((category) => ({
+          id: category.id, // ✅ Real database ID
+          title: category.name, // ✅ Real database name
+          isOpen: false,
+          isEditing: false,
+        }));
+
+        console.log(
+          "🏷️ Converted categories with real IDs:",
+          convertedCategories
+        );
+        setManualCategories(convertedCategories);
+
+        // Update state flags
+        setCurrentStep("manage");
+        setIsQuickSetup(false);
+        setIsMenuAlreadySetup(true);
+
+        // Show success message
+        alert(result.message || "Menu setup completed successfully!");
+      } else {
+        console.error("❌ Failed to fetch fresh menu data:", menuResult.error);
+        // Fallback - reload the page to get fresh data
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error("❌ Error saving menu setup:", error);
+      alert("Failed to save menu setup. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleAddManualCategory = () => {
+    console.log("➕ Adding manual category");
     const newCategory = {
-      id: `category-${Date.now()}`,
+      id: `temp-category-${Date.now()}`, // Use temp- prefix for local categories
       title: "",
       isOpen: true,
       isEditing: true,
     };
-    setManualCategories((prev) => [...prev, newCategory]);
+    console.log("🆕 New category object:", newCategory);
+    setManualCategories((prev) => {
+      console.log("📋 Previous categories:", prev);
+      const updated = [...prev, newCategory];
+      console.log("📋 Updated categories:", updated);
+      return updated;
+    });
   };
 
   const handleCategoryOpenChange = (categoryId: string, isOpen: boolean) => {
@@ -142,10 +312,29 @@ export default function MenuSetupPage() {
   };
 
   const startQuickSetup = () => {
+    if (isMenuAlreadySetup) {
+      const confirmResetup = window.confirm(
+        "You already have a menu setup. Starting quick setup will help you add more categories. Continue?"
+      );
+      if (!confirmResetup) return;
+    }
+
     setIsQuickSetup(true);
     setCurrentStep("template");
     setSelectedCategories([]);
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
+          <p className="text-muted-foreground">Checking menu setup status...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isQuickSetup) {
     // Manual category management view
@@ -155,31 +344,48 @@ export default function MenuSetupPage() {
           <div>
             <h1 className="text-2xl font-bold">Menu Management</h1>
             <p className="text-muted-foreground">
-              Manage your menu categories and items
+              {isMenuAlreadySetup
+                ? "Manage your menu categories and items"
+                : "Manage your menu categories and items"}
             </p>
+            {isMenuAlreadySetup && (
+              <p className="text-sm text-green-600 mt-1">
+                ✅ Menu setup completed
+              </p>
+            )}
           </div>
           <Button onClick={startQuickSetup} variant="outline">
             <Plus className="h-4 w-4 mr-2" />
-            Quick Setup
+            {isMenuAlreadySetup ? "Add More Categories" : "Quick Setup"}
           </Button>
         </div>
 
         <div className="space-y-4">
-          {manualCategories.map((category) => (
-            <CategoryCard
-              key={category.id}
-              id={category.id}
-              title={category.title}
-              isOpen={category.isOpen}
-              isEditing={category.isEditing}
-              onOpenChange={(isOpen) =>
-                handleCategoryOpenChange(category.id, isOpen)
-              }
-              onDelete={() => handleDeleteCategory(category.id)}
-              onSave={handleSaveCategory}
-            />
-          ))}
+          {manualCategories.map((category) => {
+            // Find the corresponding menu data for this category
+            const menuData = completeMenuData.find(
+              (menuCat) => menuCat.id === category.id
+            );
+            const existingItems = menuData?.items || [];
 
+            return (
+              <CategoryCard
+                key={category.id}
+                id={category.id}
+                title={category.title}
+                isOpen={category.isOpen}
+                isEditing={category.isEditing}
+                existingItems={existingItems} // Pass existing items
+                onOpenChange={(isOpen) =>
+                  handleCategoryOpenChange(category.id, isOpen)
+                }
+                onDelete={() => handleDeleteCategory(category.id)}
+                onSave={handleSaveCategory}
+              />
+            );
+          })}
+
+          {/* Restore Add Custom Category Button */}
           <Button
             variant="outline"
             className="w-full border-primary text-primary"
@@ -197,9 +403,13 @@ export default function MenuSetupPage() {
     <div className="p-6 max-w-4xl mx-auto">
       {/* Header */}
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold mb-2">Quick Menu Setup</h1>
+        <h1 className="text-3xl font-bold mb-2">
+          {isMenuAlreadySetup ? "Add More Categories" : "Quick Menu Setup"}
+        </h1>
         <p className="text-muted-foreground">
-          Set up your menu in minutes using our templates
+          {isMenuAlreadySetup
+            ? "Add more categories to your existing menu"
+            : "Set up your menu in minutes using our templates"}
         </p>
 
         {/* Progress Bar */}
@@ -262,22 +472,25 @@ export default function MenuSetupPage() {
             onBack={() => setCurrentStep("items")}
             onFinish={handleFinishSetup}
             onUpdateCategory={handleUpdateCategory}
+            isLoading={isSaving}
           />
         )}
       </div>
 
       {/* Footer Actions */}
-      <div className="mt-8 pt-6 border-t flex justify-center">
-        <Button
-          variant="ghost"
-          onClick={() => {
-            setIsQuickSetup(false);
-            setCurrentStep("manage");
-          }}
-        >
-          Skip and manage manually
-        </Button>
-      </div>
+      {currentStep === "template" && (
+        <div className="mt-8 pt-6 border-t flex justify-center">
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setIsQuickSetup(false);
+              setCurrentStep("manage");
+            }}
+          >
+            Skip and manage manually
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

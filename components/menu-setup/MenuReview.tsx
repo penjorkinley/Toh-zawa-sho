@@ -1,3 +1,4 @@
+// components/menu-setup/MenuReview.tsx (Updated with loading state)
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +20,7 @@ import {
   Sparkles,
   Upload,
   X,
+  Loader2,
 } from "lucide-react";
 import Image from "next/image";
 import * as React from "react";
@@ -43,7 +45,8 @@ interface MenuReviewProps {
   onUpdateCategory: (
     categoryId: string,
     updatedCategory: SelectedCategory
-  ) => void; // Add this
+  ) => void;
+  isLoading?: boolean; // Added loading prop
 }
 
 export default function MenuReview({
@@ -51,6 +54,7 @@ export default function MenuReview({
   onBack,
   onFinish,
   onUpdateCategory,
+  isLoading = false, // Default to false
 }: MenuReviewProps) {
   const [editingItem, setEditingItem] = React.useState<{
     categoryId: string;
@@ -141,7 +145,9 @@ export default function MenuReview({
   };
 
   const handleFinishSetup = () => {
-    // Here you would typically save all the menu data to your backend
+    // Don't allow finishing if already loading
+    if (isLoading) return;
+
     console.log("Saving menu data:", selectedCategories);
     onFinish();
   };
@@ -230,6 +236,7 @@ export default function MenuReview({
                             variant="outline"
                             size="sm"
                             onClick={() => handleEditItem(category, item)}
+                            disabled={isLoading}
                           >
                             <Edit3 className="h-4 w-4" />
                           </Button>
@@ -265,37 +272,87 @@ export default function MenuReview({
 
       {/* Footer Actions */}
       <div className="flex items-center justify-between pt-6 border-t">
-        <Button variant="outline" onClick={onBack} className="gap-2">
+        <Button
+          variant="outline"
+          onClick={onBack}
+          className="gap-2"
+          disabled={isLoading}
+        >
           <ArrowLeft className="h-4 w-4" />
           Back to Items
         </Button>
 
         <Button
           onClick={handleFinishSetup}
-          className="gap-2 bg-green-600 hover:bg-green-700"
+          disabled={isLoading}
+          className="gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50"
           size="lg"
         >
-          <Check className="h-4 w-4" />
-          Finish Setup
+          {isLoading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Saving Menu...
+            </>
+          ) : (
+            <>
+              <Check className="h-4 w-4" />
+              Finish Setup
+            </>
+          )}
         </Button>
       </div>
 
       {/* Edit Item Dialog */}
       <Dialog open={!!editingItem} onOpenChange={() => setEditingItem(null)}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Menu Item</DialogTitle>
           </DialogHeader>
 
           {editingItem && (
             <div className="space-y-4">
-              {/* Image Upload Section */}
               <div>
-                <label className="text-sm font-medium mb-2 block">
-                  Item Image
-                </label>
-                <div className="flex items-center gap-4">
-                  <div className="relative w-20 h-20 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden">
+                <label className="text-sm font-medium">Name</label>
+                <Input
+                  value={editingItem.name}
+                  onChange={(e) =>
+                    setEditingItem({ ...editingItem, name: e.target.value })
+                  }
+                  placeholder="Enter item name"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Description</label>
+                <Textarea
+                  value={editingItem.description}
+                  onChange={(e) =>
+                    setEditingItem({
+                      ...editingItem,
+                      description: e.target.value,
+                    })
+                  }
+                  placeholder="Enter item description"
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Price (Nu.)</label>
+                <Input
+                  type="number"
+                  value={editingItem.price}
+                  onChange={(e) =>
+                    setEditingItem({ ...editingItem, price: e.target.value })
+                  }
+                  placeholder="Enter price"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Image</label>
+                <div className="flex items-center gap-4 mt-2">
+                  <div className="relative w-20 h-20 rounded-md border overflow-hidden">
                     <Image
                       src={
                         editingItemImage
@@ -308,84 +365,36 @@ export default function MenuReview({
                     />
                   </div>
                   <div className="flex-1">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) =>
-                        setEditingItemImage(e.target.files?.[0] || null)
-                      }
-                      className="hidden"
-                      id="edit-item-image"
-                    />
-                    <label
-                      htmlFor="edit-item-image"
-                      className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 transition-colors"
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => {
+                        const input = document.createElement("input");
+                        input.type = "file";
+                        input.accept = "image/*";
+                        input.onchange = (e) => {
+                          const file = (e.target as HTMLInputElement)
+                            .files?.[0];
+                          if (file) {
+                            setEditingItemImage(file);
+                          }
+                        };
+                        input.click();
+                      }}
                     >
                       <Upload className="h-4 w-4" />
                       Change Image
-                    </label>
+                    </Button>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Upload JPG, PNG or GIF (max 5MB)
+                      Upload a new image for this item
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div>
-                <label className="text-sm font-medium mb-2 block">
-                  Item Name
-                </label>
-                <Input
-                  value={editingItem.name}
-                  onChange={(e) =>
-                    setEditingItem((prev) =>
-                      prev ? { ...prev, name: e.target.value } : null
-                    )
-                  }
-                  placeholder="Enter item name"
-                />
-              </div>
-
-              <div>
-                <label className="text-sm font-medium mb-2 block">
-                  Description
-                </label>
-                <Textarea
-                  value={editingItem.description}
-                  onChange={(e) =>
-                    setEditingItem((prev) =>
-                      prev ? { ...prev, description: e.target.value } : null
-                    )
-                  }
-                  placeholder="Enter item description"
-                  rows={3}
-                />
-              </div>
-
-              <div>
-                <label className="text-sm font-medium mb-2 block">
-                  Price (Nu.)
-                </label>
-                <Input
-                  type="number"
-                  value={editingItem.price}
-                  onChange={(e) =>
-                    setEditingItem((prev) =>
-                      prev ? { ...prev, price: e.target.value } : null
-                    )
-                  }
-                  placeholder="Enter price"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setEditingItem(null);
-                    setEditingItemImage(null);
-                  }}
-                >
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button variant="outline" onClick={() => setEditingItem(null)}>
                   <X className="h-4 w-4 mr-2" />
                   Cancel
                 </Button>

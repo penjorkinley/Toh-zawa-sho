@@ -1,3 +1,4 @@
+// app/api/upload-image/route.ts (Updated to support menu-items)
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Octokit } from "@octokit/rest";
 import { NextRequest, NextResponse } from "next/server";
@@ -36,10 +37,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate folder
-    if (folder !== "logos" && folder !== "covers") {
+    // Validate folder - Updated to include menu-items
+    const validFolders = ["logos", "covers", "menu-items"];
+    if (!validFolders.includes(folder)) {
       return NextResponse.json(
-        { error: 'Invalid folder. Must be either "logos" or "covers"' },
+        { error: `Invalid folder. Must be one of: ${validFolders.join(", ")}` },
         { status: 400 }
       );
     }
@@ -52,24 +54,29 @@ export async function POST(request: NextRequest) {
     // File path in the repository
     const filePath = `${BASE_PATH}/${folder}/${fileName}`;
 
-    // Upload file to GitHub
-    const response = await octokit.repos.createOrUpdateFileContents({
-      owner: REPO_OWNER,
-      repo: REPO_NAME,
-      path: filePath,
-      message: `Upload ${folder} image: ${fileName}`,
-      content: base64Content,
-      branch: BRANCH,
-    });
+    try {
+      // Upload file to GitHub
+      const response = await octokit.repos.createOrUpdateFileContents({
+        owner: REPO_OWNER,
+        repo: REPO_NAME,
+        path: filePath,
+        message: `Upload ${folder} image: ${fileName}`,
+        content: base64Content,
+        branch: BRANCH,
+      });
 
-    // Get the raw content URL
-    const rawContentUrl = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${BRANCH}/${filePath}`;
+      // Get the raw content URL
+      const rawContentUrl = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${BRANCH}/${filePath}`;
 
-    return NextResponse.json({
-      success: true,
-      url: rawContentUrl,
-      sha: response.data.content?.sha,
-    });
+      return NextResponse.json({
+        success: true,
+        url: rawContentUrl,
+        sha: response.data.content?.sha,
+      });
+    } catch (githubError) {
+      console.error("GitHub API Error:", githubError);
+      throw new Error("Failed to upload to GitHub repository");
+    }
   } catch (error) {
     console.error("Error uploading to GitHub:", error);
 
