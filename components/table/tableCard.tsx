@@ -1,79 +1,191 @@
+// components/table/tableCard.tsx
 "use client";
-import React, { useState } from "react";
-// import {
-//   Collapsible,
-//   CollapsibleContent,
-//   CollapsibleTrigger,
-// } from "@/components/ui/collapsible";
-import FloatingLabelInput from "../floating-label-input";
-import { Button } from "../ui/shadcn-button";
-import { Edit, QrCodeIcon, Trash2 } from "lucide-react";
-import { Card } from "../ui/card";
+
+import { useState, useTransition } from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/shadcn-button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Edit,
+  Trash2,
+  QrCode as QrCodeIcon,
+  Download,
+  Loader2,
+} from "lucide-react";
+import { RestaurantTable } from "@/lib/types/table-management";
+import {
+  createTable,
+  updateTable,
+  deleteTable,
+  generateTableQRCode,
+} from "@/lib/actions/table/actions";
+import FloatingLabelInput from "@/components/floating-label-input";
+import toast from "react-hot-toast";
 
 interface TableCardProps {
-  id?: string;
-  tableNumber?: string;
+  table?: RestaurantTable;
   isNew?: boolean;
   onDelete?: (id: string) => void;
+  onUpdate?: () => void;
 }
 
 export default function TableCard({
-  id,
-  tableNumber = "",
+  table,
   isNew = false,
   onDelete,
+  onUpdate,
 }: TableCardProps) {
   const [isEditing, setIsEditing] = useState(isNew);
-  const [value, setValue] = useState(tableNumber);
+  const [tableNumber, setTableNumber] = useState(table?.table_number || "");
   const [showQR, setShowQR] = useState(false);
+  const [qrCodeData, setQrCodeData] = useState<{
+    dataUrl: string;
+    menuUrl: string;
+  } | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const [isGeneratingQR, setIsGeneratingQR] = useState(false);
 
   const handleSave = () => {
-    // Here you would save the changes to your backend
-    setIsEditing(false);
+    if (!tableNumber.trim()) {
+      toast.error("Table number is required");
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        let result;
+
+        if (isNew) {
+          result = await createTable({
+            table_number: tableNumber.trim(),
+            is_active: true,
+          });
+        } else if (table) {
+          result = await updateTable(table.id, {
+            table_number: tableNumber.trim(),
+          });
+        }
+
+        if (result?.success) {
+          toast.success(
+            isNew ? "Table created successfully" : "Table updated successfully"
+          );
+          setIsEditing(false);
+          onUpdate?.();
+        } else {
+          toast.error(result?.error || "Failed to save table");
+        }
+      } catch (error) {
+        console.error("Error saving table:", error);
+        toast.error("Failed to save table");
+      }
+    });
   };
 
   const handleCancel = () => {
-    setValue(tableNumber);
+    setTableNumber(table?.table_number || "");
     setIsEditing(false);
+    if (isNew) {
+      onUpdate?.();
+    }
+  };
+
+  const handleDelete = () => {
+    if (!table) return;
+
+    startTransition(async () => {
+      try {
+        const result = await deleteTable(table.id);
+        if (result.success) {
+          toast.success("Table deleted successfully");
+          onDelete?.(table.id);
+        } else {
+          toast.error(result.error || "Failed to delete table");
+        }
+      } catch (error) {
+        console.error("Error deleting table:", error);
+        toast.error("Failed to delete table");
+      }
+    });
+  };
+
+  const handleGenerateQR = async () => {
+    if (!table) return;
+
+    setIsGeneratingQR(true);
+    try {
+      const result = await generateTableQRCode(table.id);
+      if (result.success && result.qrCodeDataUrl && result.menuUrl) {
+        setQrCodeData({
+          dataUrl: result.qrCodeDataUrl,
+          menuUrl: result.menuUrl,
+        });
+        setShowQR(true);
+      } else {
+        toast.error(result.error || "Failed to generate QR code");
+      }
+    } catch (error) {
+      console.error("Error generating QR code:", error);
+      toast.error("Failed to generate QR code");
+    } finally {
+      setIsGeneratingQR(false);
+    }
   };
 
   const handleDownloadQR = () => {
-    // Implement QR code download functionality
-    // This will be implemented when you add the QR code generation logic
-  };
+    if (!qrCodeData || !table) return;
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setValue(e.target.value);
+    try {
+      const link = document.createElement("a");
+      link.download = `table-${table.table_number}-qr-code.png`;
+      link.href = qrCodeData.dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success("QR code downloaded successfully");
+    } catch (error) {
+      console.error("Error downloading QR code:", error);
+      toast.error("Failed to download QR code");
+    }
   };
 
   if (isEditing) {
     return (
-      <Card className="rounded-xl p-4 shadow-md w-11/12">
+      <Card className="rounded-xl p-4 shadow-md w-full">
         <div className="flex flex-col gap-4">
           <FloatingLabelInput
             label="Table Number"
-            value={value}
-            onChange={handleChange}
+            value={tableNumber}
+            onChange={(e) => setTableNumber(e.target.value)}
           />
           <div className="flex justify-between items-center gap-2 w-full">
             <Button
               variant="ghost"
               className="text-primary underline"
-              onClick={() => setShowQR(true)}
+              onClick={handleGenerateQR}
+              disabled={isPending || !table || isGeneratingQR}
             >
-              Generate QR
+              {isGeneratingQR ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                "Generate QR"
+              )}
             </Button>
             <div className="space-x-2">
               <Button
                 variant="outline"
                 className="border-primary text-primary w-20"
                 onClick={handleCancel}
+                disabled={isPending}
               >
                 Cancel
               </Button>
@@ -81,8 +193,13 @@ export default function TableCard({
                 variant="default"
                 className="bg-primary text-white w-20"
                 onClick={handleSave}
+                disabled={isPending}
               >
-                Save
+                {isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Save"
+                )}
               </Button>
             </div>
           </div>
@@ -93,17 +210,22 @@ export default function TableCard({
 
   return (
     <>
-      <Card className="rounded-xl p-4 shadow-md w-11/12">
+      <Card className="rounded-xl p-4 shadow-md w-full">
         <div className="flex justify-between items-center w-full">
-          <p className="text-lg">Table {value}</p>
-          <div>
+          <p className="text-lg">Table {tableNumber}</p>
+          <div className="flex items-center">
             <Button
               variant="ghost"
               size="icon"
               className="h-8 w-8"
-              onClick={() => setShowQR(true)}
+              onClick={handleGenerateQR}
+              disabled={isGeneratingQR}
             >
-              <QrCodeIcon className="h-4 w-4" />
+              {isGeneratingQR ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <QrCodeIcon className="h-4 w-4" />
+              )}
               <span className="sr-only">Generate QR</span>
             </Button>
             <Button
@@ -111,6 +233,7 @@ export default function TableCard({
               size="icon"
               className="h-8 w-8"
               onClick={() => setIsEditing(true)}
+              disabled={isPending}
             >
               <Edit className="h-4 w-4" />
               <span className="sr-only">Edit</span>
@@ -120,9 +243,14 @@ export default function TableCard({
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8"
-                onClick={() => onDelete(id!)}
+                onClick={handleDelete}
+                disabled={isPending}
               >
-                <Trash2 className="h-4 w-4" />
+                {isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
                 <span className="sr-only">Delete</span>
               </Button>
             )}
@@ -133,20 +261,42 @@ export default function TableCard({
       <Dialog open={showQR} onOpenChange={setShowQR}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-center">Table {value}</DialogTitle>
+            <DialogTitle className="text-center">
+              Table {tableNumber} QR Code
+            </DialogTitle>
           </DialogHeader>
           <div className="flex flex-col items-center justify-center space-y-4">
-            <div className="w-64 h-64 bg-muted flex items-center justify-center">
-              {/* QR code will be generated here */}
-              <QrCodeIcon className="w-32 h-32 text-muted-foreground" />
-            </div>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={handleDownloadQR}
-            >
-              Download
-            </Button>
+            {qrCodeData ? (
+              <>
+                <div className="w-64 h-64 flex items-center justify-center border rounded-lg">
+                  <img
+                    src={qrCodeData.dataUrl}
+                    alt={`QR Code for Table ${tableNumber}`}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <div className="text-center space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Scan this QR code to view the menu
+                  </p>
+                  <p className="text-xs text-muted-foreground font-mono break-all">
+                    {qrCodeData.menuUrl}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleDownloadQR}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download QR Code
+                </Button>
+              </>
+            ) : (
+              <div className="w-64 h-64 bg-muted flex items-center justify-center">
+                <QrCodeIcon className="w-32 h-32 text-muted-foreground" />
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

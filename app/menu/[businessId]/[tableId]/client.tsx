@@ -1,4 +1,4 @@
-// app/menu/[restaurantId]/page.tsx
+// app/menu/[businessId]/[tableId]/client.tsx
 "use client";
 
 import { useState } from "react";
@@ -9,99 +9,23 @@ import MenuItemCard from "@/components/customer-menu/MenuItemCard";
 import MenuItemModal from "@/components/customer-menu/MenuItemModal";
 import Image from "next/image";
 import { MenuItem } from "@/lib/types/menu";
+import { PublicMenuData } from "@/lib/types/table-management";
+import { transformDatabaseToCustomerMenu } from "@/lib/utils/menu-transform";
 
-// Mock data - replace with API calls
-const restaurantData = {
-  id: "1",
-  name: "Bistro Fine Dining",
-  logo: "/tzs-logo.svg",
-  greeting: "Kuzu! Toh kae chi ya?",
-};
+interface CustomerMenuClientProps {
+  menuData: PublicMenuData;
+}
 
-const categories = [
-  { id: "all", name: "ALL", active: true },
-  { id: "bhutanese", name: "Bhutan Cuisine" },
-  { id: "indian", name: "Indian Cuisine" },
-  { id: "chinese", name: "Chinese" },
-  { id: "continental", name: "Continental" },
-  { id: "beverages", name: "Beverages" },
-];
+export default function CustomerMenuClient({
+  menuData,
+}: CustomerMenuClientProps) {
+  // Transform database format to your existing component format
+  const { restaurant, categories, menuItems } =
+    transformDatabaseToCustomerMenu(menuData);
 
-const menuItems: MenuItem[] = [
-  {
-    id: "1",
-    name: "Cheese Pizza",
-    description:
-      "Fresh local potatoes, green chilli, tomatoes, cottage cheese and amul cheese",
-    price: { small: 230, medium: 350, large: 450 },
-    sizes: ["Small", "Medium", "Large", "Regular", "Extra Large"],
-    image: "/default-food-img.jpg",
-    isVeg: true,
-    category: "continental",
-  },
-  {
-    id: "2",
-    name: "Kewa Datsi",
-    description:
-      "Fresh local potatoes, chilli and traditional Bhutanese cheese",
-    price: { regular: 130 },
-    sizes: ["Regular"],
-    image: "/default-food-img.jpg",
-    isVeg: true,
-    category: "bhutanese",
-  },
-  {
-    id: "3",
-    name: "Pasta",
-    description: "Homemade pasta, basil and herbs",
-    price: { regular: 150 },
-    sizes: ["Regular"],
-    image: "/default-food-img.jpg",
-    isVeg: true,
-    category: "continental",
-  },
-  {
-    id: "4",
-    name: "Beef Biryani",
-    description: "Spiced rice with tender meat and aromatic herbs",
-    price: { regular: 200 },
-    sizes: ["Regular"],
-    image: "/default-food-img.jpg",
-    isVeg: false,
-    category: "indian",
-  },
-  {
-    id: "5",
-    name: "Garden Salad",
-    description: "Fresh mixed greens with seasonal vegetables",
-    price: { regular: 120 },
-    sizes: ["Regular"],
-    image: "/default-food-img.jpg",
-    isVeg: true,
-    category: "continental",
-  },
-  {
-    id: "6",
-    name: "Thukpa",
-    description: "Traditional Bhutanese noodle soup with vegetables",
-    price: { regular: 140 },
-    sizes: ["Regular"],
-    image: "/default-food-img.jpg",
-    isVeg: true,
-    category: "bhutanese",
-  },
-];
-
-export default function CustomerMenuPage({
-  params,
-}: {
-  params: { restaurantId: string };
-}) {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
-  const [selectedItem, setSelectedItem] = useState<
-    (typeof menuItems)[0] | null
-  >(null);
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
@@ -115,7 +39,7 @@ export default function CustomerMenuPage({
     return matchesSearch && matchesCategory;
   });
 
-  const handleItemClick = (item: (typeof menuItems)[0]) => {
+  const handleItemClick = (item: MenuItem) => {
     setSelectedItem(item);
     setIsModalOpen(true);
   };
@@ -127,21 +51,30 @@ export default function CustomerMenuPage({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+      {/* Header - Enhanced with table info */}
       <div className="bg-white shadow-sm sticky top-0 z-40">
         <div className="px-4 py-4">
           <div className="flex items-center gap-3 mb-4">
             <div className="relative w-12 h-12">
               <Image
-                src={restaurantData.logo}
-                alt={restaurantData.name}
+                src={restaurant.logo}
+                alt={restaurant.name}
                 fill
                 className="object-contain"
               />
             </div>
-            <h1 className="text-lg font-semibold text-gray-800">
-              {restaurantData.greeting}
-            </h1>
+            <div className="flex-1">
+              <h1 className="text-lg font-semibold text-gray-800">
+                {restaurant.greeting}
+              </h1>
+              {/* Show restaurant name and table info */}
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-sm text-gray-600">{restaurant.name}</span>
+                <Badge variant="outline" className="text-xs">
+                  Table {menuData.table.table_number}
+                </Badge>
+              </div>
+            </div>
           </div>
 
           {/* Search Bar with border */}
@@ -195,7 +128,9 @@ export default function CustomerMenuPage({
               No items found
             </h3>
             <p className="text-sm text-gray-500">
-              Try searching with different keywords
+              {searchTerm
+                ? "Try searching with different keywords"
+                : "No menu items available in this category"}
             </p>
           </div>
         ) : (
@@ -217,6 +152,17 @@ export default function CustomerMenuPage({
         isOpen={isModalOpen}
         onClose={handleCloseModal}
       />
+
+      {/* Footer */}
+      <div className="bg-white border-t border-gray-200 py-4 mt-8">
+        <div className="px-4 text-center">
+          <p className="text-gray-600 text-sm">Thank you for dining with us!</p>
+          <p className="text-gray-500 text-xs mt-1">
+            Table {menuData.table.table_number} •{" "}
+            {menuData.restaurant.business_name}
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

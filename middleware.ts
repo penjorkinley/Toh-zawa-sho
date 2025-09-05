@@ -1,4 +1,4 @@
-// middleware.ts
+// middleware.ts - FIXED VERSION
 import { createServerClient } from "@supabase/ssr";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
@@ -11,6 +11,7 @@ const publicRoutes = [
   "/forgot-password",
   "/verify-otp",
   "/reset-password",
+  "/menu",
 ];
 
 // Routes that require super-admin role
@@ -51,7 +52,6 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   // CRITICAL FIX: Early return for ALL static assets and images
-  // This ensures no authentication checks run on any static files
   if (
     path.startsWith("/_next/") || // Next.js static files
     path.startsWith("/images/") || // Images folder
@@ -83,7 +83,7 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // Check if it's a public route - if so, allow access
+  // 🔥 CRITICAL FIX: Check if it's a public route - MUST include /menu routes
   if (
     publicRoutes.some((route) => path === route || path.startsWith(`${route}/`))
   ) {
@@ -121,7 +121,6 @@ export async function middleware(request: NextRequest) {
   }
 
   // If user is not approved, sign them out and redirect to login
-  // (But don't redirect API routes, let them return their own unauthorized responses)
   if (profile?.status !== "approved" && !path.startsWith("/api/")) {
     const redirectUrl = new URL("/login", request.url);
     return NextResponse.redirect(redirectUrl);
