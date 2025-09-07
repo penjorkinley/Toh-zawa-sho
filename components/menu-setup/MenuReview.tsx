@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/shadcn-button";
 import { Textarea } from "@/components/ui/textarea";
 import { type CategoryTemplate } from "@/lib/data/menu-templates";
+import { uploadMenuItemImage } from "@/lib/actions/menu/actions";
 import {
   ArrowLeft,
   Check,
@@ -110,7 +111,7 @@ export default function MenuReview({
     setEditingItemImage(null);
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (editingItem) {
       // Find the category and update the item
       const categoryToUpdate = selectedCategories.find(
@@ -118,6 +119,27 @@ export default function MenuReview({
       );
 
       if (categoryToUpdate) {
+        let imageUrl = editingItem.image;
+
+        // If there's a new image to upload
+        if (editingItemImage) {
+          try {
+            const uploadResult = await uploadMenuItemImage(editingItemImage);
+            if (uploadResult.success && uploadResult.url) {
+              imageUrl = uploadResult.url;
+            } else {
+              console.error(
+                "Failed to upload edited item image:",
+                uploadResult.error
+              );
+              // Keep existing image on failure
+            }
+          } catch (error) {
+            console.error("Error uploading edited item image:", error);
+            // Keep existing image on error
+          }
+        }
+
         const updatedItems = categoryToUpdate.selectedItems.map((item) =>
           item.id === editingItem.itemId
             ? {
@@ -125,9 +147,7 @@ export default function MenuReview({
                 name: editingItem.name,
                 description: editingItem.description,
                 price: editingItem.price,
-                image: editingItemImage
-                  ? URL.createObjectURL(editingItemImage)
-                  : editingItem.image,
+                image: imageUrl,
               }
             : item
         );

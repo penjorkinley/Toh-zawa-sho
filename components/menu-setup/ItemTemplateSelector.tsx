@@ -23,6 +23,7 @@ import {
   Plus,
   Upload,
 } from "lucide-react";
+import { uploadMenuItemImage } from "@/lib/actions/menu/actions";
 
 interface SelectedCategory {
   template: CategoryTemplate;
@@ -70,7 +71,7 @@ export default function ItemTemplateSelector({
     );
   };
 
-  const handleItemToggle = (
+  const handleItemToggle = async (
     categoryId: string,
     item: any,
     isTemplate: boolean = true
@@ -94,12 +95,43 @@ export default function ItemTemplateSelector({
       );
     } else {
       // Add item
+      let imageUrl = item.image || "/default-food-img.jpg";
+
+      // If it's not already a GitHub URL and not the default image
+      if (
+        imageUrl !== "/default-food-img.jpg" &&
+        !imageUrl.startsWith("https://raw.githubusercontent.com/")
+      ) {
+        try {
+          const response = await fetch(imageUrl);
+          const blob = await response.blob();
+          const file = new File([blob], `${item.name}-${Date.now()}.jpg`, {
+            type: "image/jpeg",
+          });
+
+          const uploadResult = await uploadMenuItemImage(file);
+          if (uploadResult.success && uploadResult.url) {
+            imageUrl = uploadResult.url;
+          } else {
+            console.error(
+              "Failed to upload template item image:",
+              uploadResult.error
+            );
+            imageUrl = "/default-food-img.jpg";
+          }
+        } catch (error) {
+          console.error("Error processing template item image:", error);
+          imageUrl = "/default-food-img.jpg";
+        }
+      }
+
       const newItem = {
         id: itemId,
         name: item.name,
         description: item.description,
         price: isTemplate ? item.defaultPrice : item.price,
         isCustom: !isTemplate,
+        image: imageUrl,
       };
       newItems = [...existingItems, newItem];
     }
@@ -139,15 +171,21 @@ export default function ItemTemplateSelector({
     }
   };
 
-  const handleAddCustomItem = (categoryId: string) => {
+  const handleAddCustomItem = async (categoryId: string) => {
     const customItem = customItems[categoryId];
     if (!customItem?.name.trim()) return;
 
-    // Create image URL for the custom item
     let imageUrl = "/default-food-img.jpg";
     const imageFile = customItemImages[categoryId];
+
     if (imageFile) {
-      imageUrl = URL.createObjectURL(imageFile);
+      // Upload image to GitHub
+      const uploadResult = await uploadMenuItemImage(imageFile);
+      if (uploadResult.success && uploadResult.url) {
+        imageUrl = uploadResult.url;
+      } else {
+        console.error("Failed to upload image:", uploadResult.error);
+      }
     }
 
     const newItem = {
