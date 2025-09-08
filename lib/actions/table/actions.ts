@@ -1,4 +1,4 @@
-// lib/actions/table/actions.ts - FIXED VERSION
+// lib/actions/table/actions.ts - COMPLETE FILE WITH TEMPLATE SUPPORT
 "use server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -11,6 +11,16 @@ import {
 } from "@/lib/types/table-management";
 import { revalidatePath } from "next/cache";
 import QRCode from "qrcode";
+
+// New interface for template-enabled QR generation
+export interface QRCodeTemplateResult {
+  success: boolean;
+  qrCodeDataUrl?: string;
+  templateDataUrl?: string;
+  menuUrl?: string;
+  restaurantName?: string;
+  error?: string;
+}
 
 // Helper function to get business_id for the current user
 async function getCurrentUserBusinessId(): Promise<string | null> {
@@ -185,7 +195,7 @@ export async function deleteTable(tableId: string): Promise<{
   }
 }
 
-// Generate QR code for a table - FIXED: Now stores QR URL in database
+// Generate QR code for a table - ORIGINAL VERSION (kept for backward compatibility)
 export async function generateTableQRCode(
   tableId: string
 ): Promise<QRCodeGenerationResult> {
@@ -199,7 +209,15 @@ export async function generateTableQRCode(
 
     const { data: table, error: tableError } = await supabase
       .from("restaurant_tables")
-      .select("*")
+      .select(
+        `
+        *,
+        business_information:business_id (
+          id,
+          business_name
+        )
+      `
+      )
       .eq("id", tableId)
       .eq("business_id", businessId)
       .single();
@@ -207,6 +225,8 @@ export async function generateTableQRCode(
     if (tableError || !table) {
       return { success: false, error: "Table not found" };
     }
+
+    const restaurantName = table.business_information?.business_name;
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const menuUrl = `${baseUrl}/menu/${businessId}/${tableId}`;
@@ -222,7 +242,7 @@ export async function generateTableQRCode(
       errorCorrectionLevel: "M",
     });
 
-    // ✅ FIXED: Store QR code URL in database
+    // Store QR code URL in database
     const { error: updateError } = await supabase
       .from("restaurant_tables")
       .update({ qr_code_url: menuUrl })
@@ -241,6 +261,96 @@ export async function generateTableQRCode(
     };
   } catch (error) {
     console.error("Error generating QR code:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Failed to generate QR code",
+    };
+  }
+}
+
+// NEW: Generate QR code with restaurant template data
+export async function generateTableQRCodeWithTemplate(
+  tableId: string
+): Promise<QRCodeTemplateResult> {
+  try {
+    const businessId = await getCurrentUserBusinessId();
+    if (!businessId) {
+      return { success: false, error: "Business not found" };
+    }
+
+    const supabase = await createSupabaseServerClient();
+
+    // Get table information
+    const { data: table, error: tableError } = await supabase
+      .from("restaurant_tables")
+      .select("*")
+      .eq("id", tableId)
+      .eq("business_id", businessId)
+      .single();
+
+    if (tableError || !table) {
+      return { success: false, error: "Table not found" };
+    }
+
+    // Get restaurant information and business name by following the reference chain
+    const { data: businessData, error: businessError } = await supabase
+      .from("business_information")
+      .select("user_id")
+      .eq("id", businessId)
+      .single();
+
+    if (businessError || !businessData) {
+      console.error("Business error:", businessError);
+      return { success: false, error: "Restaurant information not found" };
+    }
+
+    // Get business name from user_profiles using user_id
+    const { data: userData, error: userError } = await supabase
+      .from("user_profiles")
+      .select("business_name")
+      .eq("id", businessData.user_id)
+      .single();
+
+    if (userError || !userData) {
+      console.error("User profile error:", userError);
+      return { success: false, error: "Restaurant information not found" };
+    }
+
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const menuUrl = `${baseUrl}/menu/${businessId}/${tableId}`;
+
+    // Generate QR code
+    const qrCodeDataUrl = await QRCode.toDataURL(menuUrl, {
+      width: 400,
+      margin: 2,
+      color: {
+        dark: "#000000",
+        light: "#FFFFFF",
+      },
+      errorCorrectionLevel: "M",
+    });
+
+    // Store QR code URL in database
+    const { error: updateError } = await supabase
+      .from("restaurant_tables")
+      .update({ qr_code_url: menuUrl })
+      .eq("id", tableId)
+      .eq("business_id", businessId);
+
+    if (updateError) {
+      console.error("Error updating QR code URL:", updateError);
+      // Don't fail the entire operation, just log the error
+    }
+
+    return {
+      success: true,
+      qrCodeDataUrl,
+      menuUrl,
+      restaurantName: userData.business_name || "Restaurant",
+    };
+  } catch (error) {
+    console.error("Error generating QR code with template:", error);
     return {
       success: false,
       error:
@@ -291,7 +401,7 @@ export async function getPublicMenuData(
       return { success: false, error: "Table not found or inactive" };
     }
 
-    // ✅ FIXED: Get categories with proper ordering (no nested ordering)
+    // Get categories with proper ordering (no nested ordering)
     const { data: categories, error: menuError } = await supabase
       .from("menu_categories")
       .select(
@@ -308,7 +418,7 @@ export async function getPublicMenuData(
 
     if (menuError) throw menuError;
 
-    // ✅ FIXED: Get menu items separately with proper ordering
+    // Get menu items separately with proper ordering
     const { data: menuItems, error: itemsError } = await supabase
       .from("menu_items")
       .select(
@@ -332,7 +442,7 @@ export async function getPublicMenuData(
 
     if (itemsError) throw itemsError;
 
-    // ✅ FIXED: Get item sizes separately with proper ordering
+    // Get item sizes separately with proper ordering
     const { data: itemSizes, error: sizesError } = await supabase
       .from("menu_item_sizes")
       .select(
@@ -352,37 +462,29 @@ export async function getPublicMenuData(
 
     if (sizesError) throw sizesError;
 
-    // ✅ Manually group the data since we can't use nested ordering
-    const categoriesWithItems = (categories || []).map((category) => {
-      const categoryItems = (menuItems || [])
+    // Organize data into the expected structure
+    const organizedCategories = (categories || []).map((category) => ({
+      id: category.id,
+      name: category.name,
+      description: category.description,
+      items: (menuItems || [])
         .filter((item) => item.category_id === category.id)
-        .map((item) => {
-          const itemSizesData = (itemSizes || [])
+        .map((item) => ({
+          id: item.id,
+          name: item.name,
+          description: item.description,
+          image_url: item.image_url,
+          is_available: item.is_available,
+          is_vegetarian: item.is_vegetarian,
+          sizes: (itemSizes || [])
             .filter((size) => size.item_id === item.id)
             .map((size) => ({
               id: size.id,
               size_name: size.size_name,
               price: size.price,
-            }));
-
-          return {
-            id: item.id,
-            name: item.name,
-            description: item.description,
-            image_url: item.image_url,
-            is_available: item.is_available,
-            is_vegetarian: item.is_vegetarian,
-            sizes: itemSizesData,
-          };
-        });
-
-      return {
-        id: category.id,
-        name: category.name,
-        description: category.description,
-        items: categoryItems,
-      };
-    });
+            })),
+        })),
+    }));
 
     const publicMenuData: PublicMenuData = {
       restaurant: {
@@ -400,7 +502,7 @@ export async function getPublicMenuData(
         table_number: tableData.table_number,
       },
       menu: {
-        categories: categoriesWithItems,
+        categories: organizedCategories,
       },
     };
 

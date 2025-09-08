@@ -162,7 +162,7 @@ export const sendApprovalEmail = async (
           </div>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${process.env.APP_URL}/login" 
+            <a href="${process.env.NEXT_PUBLIC_APP_URL}/login" 
                style="background: #10b981; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block;">
               Access Your Account
             </a>
@@ -193,7 +193,9 @@ export const sendApprovalEmail = async (
     
     Congratulations! Your registration for ${businessName} has been approved.
     
-    You can now log in to your account at: ${process.env.APP_URL}/login
+    You can now log in to your account at: ${
+      process.env.NEXT_PUBLIC_APP_URL
+    }/login
     
     What's next:
     - Log in to your account
@@ -269,7 +271,7 @@ export const sendRejectionEmail = async (
           </div>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${process.env.APP_URL}/signup" 
+            <a href="${process.env.NEXT_PUBLIC_APP_URL}/signup" 
                style="background: #0369a1; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block;">
               Apply Again
             </a>
@@ -308,7 +310,7 @@ export const sendRejectionEmail = async (
     - Resubmit your application
     - Contact support if you have questions
     
-    Apply again at: ${process.env.APP_URL}/signup
+    Apply again at: ${process.env.NEXT_PUBLIC_APP_URL}/signup
     Support: ${process.env.SUPPORT_EMAIL}
     
     © ${getCurrentYear()} ${process.env.APP_NAME || "Restaurant Platform"}

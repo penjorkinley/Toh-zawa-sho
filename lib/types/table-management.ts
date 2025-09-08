@@ -1,4 +1,4 @@
-// lib/types/table-management.ts
+// lib/types/table-management.ts - UPDATED WITH TEMPLATE SUPPORT
 
 export interface RestaurantTable {
   id: string;
@@ -32,6 +32,16 @@ export interface QRCodeGenerationResult {
   success: boolean;
   qrCodeDataUrl?: string;
   menuUrl?: string;
+  error?: string;
+}
+
+// NEW: Template-enabled QR generation result
+export interface QRCodeTemplateResult {
+  success: boolean;
+  qrCodeDataUrl?: string;
+  templateDataUrl?: string;
+  menuUrl?: string;
+  restaurantName?: string;
   error?: string;
 }
 

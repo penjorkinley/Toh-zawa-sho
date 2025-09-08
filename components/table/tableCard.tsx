@@ -1,4 +1,4 @@
-// components/table/tableCard.tsx
+// components/table/tableCard.tsx - COMPLETE FILE WITH TEMPLATE SUPPORT
 "use client";
 
 import { useState, useTransition } from "react";
@@ -23,7 +23,12 @@ import {
   updateTable,
   deleteTable,
   generateTableQRCode,
+  generateTableQRCodeWithTemplate,
 } from "@/lib/actions/table/actions";
+import {
+  generateQRCodeTemplate,
+  QRTemplateData,
+} from "@/lib/utils/qr-template-generator";
 import FloatingLabelInput from "@/components/floating-label-input";
 import toast from "react-hot-toast";
 
@@ -47,6 +52,7 @@ export default function TableCard({
     dataUrl: string;
     menuUrl: string;
   } | null>(null);
+  const [templateDataUrl, setTemplateDataUrl] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isGeneratingQR, setIsGeneratingQR] = useState(false);
 
@@ -119,12 +125,37 @@ export default function TableCard({
 
     setIsGeneratingQR(true);
     try {
-      const result = await generateTableQRCode(table.id);
-      if (result.success && result.qrCodeDataUrl && result.menuUrl) {
+      // Use the new template-enabled function
+      const result = await generateTableQRCodeWithTemplate(table.id);
+      if (
+        result.success &&
+        result.qrCodeDataUrl &&
+        result.menuUrl &&
+        result.restaurantName
+      ) {
         setQrCodeData({
           dataUrl: result.qrCodeDataUrl,
           menuUrl: result.menuUrl,
         });
+
+        // Generate the beautiful template
+        const templateData: QRTemplateData = {
+          restaurantName: result.restaurantName || "Default Restaurant Name",
+          tableNumber: table.table_number,
+          qrCodeDataUrl: result.qrCodeDataUrl,
+          menuUrl: result.menuUrl,
+        };
+
+        // console.log("Template data being passed:", templateData);
+
+        try {
+          const templateUrl = await generateQRCodeTemplate(templateData);
+          setTemplateDataUrl(templateUrl);
+        } catch (templateError) {
+          console.error("Error generating template:", templateError);
+          toast.error("QR generated but template creation failed");
+        }
+
         setShowQR(true);
       } else {
         toast.error(result.error || "Failed to generate QR code");
@@ -138,17 +169,28 @@ export default function TableCard({
   };
 
   const handleDownloadQR = () => {
-    if (!qrCodeData || !table) return;
+    if (!table) return;
 
     try {
       const link = document.createElement("a");
-      link.download = `table-${table.table_number}-qr-code.png`;
-      link.href = qrCodeData.dataUrl;
+
+      // Use template if available, otherwise fall back to basic QR
+      if (templateDataUrl) {
+        link.download = `${table.table_number}-menu-qr-card.png`;
+        link.href = templateDataUrl;
+        toast.success("QR code card downloaded successfully!");
+      } else if (qrCodeData) {
+        link.download = `table-${table.table_number}-qr-code.png`;
+        link.href = qrCodeData.dataUrl;
+        toast.success("QR code downloaded successfully");
+      } else {
+        toast.error("No QR code available to download");
+        return;
+      }
+
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-
-      toast.success("QR code downloaded successfully");
     } catch (error) {
       console.error("Error downloading QR code:", error);
       toast.error("Failed to download QR code");
@@ -261,36 +303,42 @@ export default function TableCard({
       <Dialog open={showQR} onOpenChange={setShowQR}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-center">
-              Table {tableNumber} QR Code
-            </DialogTitle>
+            <DialogTitle>Table {table?.table_number} QR Code</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col items-center justify-center space-y-4">
+          <div className="flex flex-col items-center space-y-4 py-4">
             {qrCodeData ? (
               <>
-                <div className="w-64 h-64 flex items-center justify-center border rounded-lg">
-                  <img
-                    src={qrCodeData.dataUrl}
-                    alt={`QR Code for Table ${tableNumber}`}
-                    className="w-full h-full object-contain"
-                  />
+                {/* Template Preview */}
+                {templateDataUrl ? (
+                  <div className="flex items-center justify-center border rounded-lg bg-white p-4">
+                    <img
+                      src={templateDataUrl}
+                      alt={`QR Code Card for Table ${table?.table_number}`}
+                      className="max-w-full max-h-96 object-contain"
+                      style={{ maxWidth: "300px" }}
+                    />
+                  </div>
+                ) : (
+                  // Fallback to basic QR if template failed
+                  <div className="w-64 h-64 flex items-center justify-center border rounded-lg">
+                    <img
+                      src={qrCodeData.dataUrl}
+                      alt={`QR Code for Table ${table?.table_number}`}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                )}
+
+                <div className="flex justify-center w-full">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={handleDownloadQR}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Card
+                  </Button>
                 </div>
-                <div className="text-center space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    Scan this QR code to view the menu
-                  </p>
-                  <p className="text-xs text-muted-foreground font-mono break-all">
-                    {qrCodeData.menuUrl}
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleDownloadQR}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download QR Code
-                </Button>
               </>
             ) : (
               <div className="w-64 h-64 bg-muted flex items-center justify-center">
