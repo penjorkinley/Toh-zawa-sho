@@ -1,4 +1,6 @@
-// components/menu-setup/categoryCard.tsx (FIXED VERSION - No blob URLs)
+// Complete CategoryCard implementation with Menu Item editing
+// Replace the entire CategoryCard component in components/menu-setup/categoryCard.tsx
+
 "use client";
 
 import React, { useState } from "react";
@@ -33,6 +35,7 @@ import {
   deleteMenuItem,
   createMenuCategory,
   uploadMenuItemImage,
+  updateMenuItem,
 } from "@/lib/actions/menu/actions";
 
 // Database menu item interface (with sizes)
@@ -62,7 +65,7 @@ interface CategoryCardProps {
   onSave?: (id: string, newTitle: string) => void;
 }
 
-// Advanced Menu Item Form Component
+// Enhanced Menu Item Form Component (handles both add and edit)
 interface MenuItemFormProps {
   isOpen: boolean;
   onToggle: (isOpen: boolean) => void;
@@ -75,6 +78,7 @@ interface MenuItemFormProps {
     sizes: Array<{ size_name: string; price: number }>;
     image_url: string;
   }) => void;
+  editItem?: DatabaseMenuItem; // Optional - if provided, this is edit mode
 }
 
 function MenuItemForm({
@@ -82,36 +86,72 @@ function MenuItemForm({
   onToggle,
   onDelete,
   onSave,
+  editItem,
 }: MenuItemFormProps) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [isVegetarian, setIsVegetarian] = useState(false);
-  const [hasMultipleSizes, setHasMultipleSizes] = useState(false);
-  const [singlePrice, setSinglePrice] = useState("");
+  const isEditMode = !!editItem;
+
+  // Initialize form with existing data if editing
+  const [name, setName] = useState(editItem?.name || "");
+  const [description, setDescription] = useState(editItem?.description || "");
+  const [isVegetarian, setIsVegetarian] = useState(
+    editItem?.is_vegetarian || false
+  );
+  const [hasMultipleSizes, setHasMultipleSizes] = useState(
+    editItem?.has_multiple_sizes || false
+  );
+  const [singlePrice, setSinglePrice] = useState(
+    editItem && !editItem.has_multiple_sizes
+      ? editItem.sizes?.[0]?.price.toString() || ""
+      : ""
+  );
   const [sizes, setSizes] = useState<
     Array<{ size_name: string; price: string }>
-  >([{ size_name: "", price: "" }]);
+  >(
+    editItem?.has_multiple_sizes && editItem.sizes
+      ? editItem.sizes.map((s) => ({
+          size_name: s.size_name,
+          price: s.price.toString(),
+        }))
+      : [{ size_name: "", price: "" }]
+  );
   const [isSaving, setIsSaving] = useState(false);
 
-  // FIXED: Image handling state - store File object, not blob URL
+  // Image handling
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string>(
-    "/default-food-img.jpg"
+    editItem?.image_url || "/default-food-img.jpg"
   );
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
-  // FIXED: Properly manage image preview with cleanup
+  // Reset form when editItem changes
+  React.useEffect(() => {
+    if (editItem) {
+      setName(editItem.name);
+      setDescription(editItem.description || "");
+      setIsVegetarian(editItem.is_vegetarian);
+      setHasMultipleSizes(editItem.has_multiple_sizes);
+      setSinglePrice(
+        !editItem.has_multiple_sizes
+          ? editItem.sizes?.[0]?.price.toString() || ""
+          : ""
+      );
+      setSizes(
+        editItem.has_multiple_sizes && editItem.sizes
+          ? editItem.sizes.map((s) => ({
+              size_name: s.size_name,
+              price: s.price.toString(),
+            }))
+          : [{ size_name: "", price: "" }]
+      );
+      setImagePreviewUrl(editItem.image_url || "/default-food-img.jpg");
+    }
+  }, [editItem]);
+
   React.useEffect(() => {
     if (selectedImageFile) {
       const objectUrl = URL.createObjectURL(selectedImageFile);
       setImagePreviewUrl(objectUrl);
-
-      // Cleanup function to revoke the object URL
-      return () => {
-        URL.revokeObjectURL(objectUrl);
-      };
-    } else {
-      setImagePreviewUrl("/default-food-img.jpg");
+      return () => URL.revokeObjectURL(objectUrl);
     }
   }, [selectedImageFile]);
 
@@ -136,305 +176,260 @@ function MenuItemForm({
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // FIXED: Store the File object, not a blob URL
       setSelectedImageFile(file);
-      console.log("📷 Image file selected:", file.name, file.size);
     }
   };
 
-  const removeImage = () => {
-    setSelectedImageFile(null);
-    // Preview URL will be reset by useEffect
+  const validateForm = () => {
+    if (!name.trim()) {
+      alert("Please enter item name");
+      return false;
+    }
+
+    if (hasMultipleSizes) {
+      const validSizes = sizes.filter(
+        (size) => size.size_name.trim() && size.price.trim()
+      );
+      if (validSizes.length === 0) {
+        alert("Please add at least one valid size");
+        return false;
+      }
+    } else {
+      if (!singlePrice.trim() || isNaN(parseFloat(singlePrice))) {
+        alert("Please enter a valid price");
+        return false;
+      }
+    }
+
+    return true;
   };
 
   const handleSave = async () => {
-    if (!name.trim()) {
-      alert("Please enter an item name");
-      return;
-    }
+    if (!validateForm()) return;
 
     setIsSaving(true);
+
     try {
-      let imageUrl = "/default-food-img.jpg";
+      let finalImageUrl = imagePreviewUrl;
 
-      // FIXED: Upload actual File object if selected
+      // Upload new image if selected
       if (selectedImageFile) {
-        console.log("📤 Uploading image file:", selectedImageFile.name);
         setIsUploadingImage(true);
-
         const uploadResult = await uploadMenuItemImage(selectedImageFile);
-        setIsUploadingImage(false);
-
         if (uploadResult.success && uploadResult.url) {
-          imageUrl = uploadResult.url;
-          console.log("✅ Image uploaded successfully:", imageUrl);
+          finalImageUrl = uploadResult.url;
         } else {
-          console.error("❌ Image upload failed:", uploadResult.error);
-          alert(`Image upload failed: ${uploadResult.error}`);
-          // Continue with default image instead of failing completely
+          console.error("Image upload failed:", uploadResult.error);
+          alert(
+            "Image upload failed, but item will be saved with current image"
+          );
         }
+        setIsUploadingImage(false);
       }
 
-      let sizesData;
+      // Prepare sizes data
+      const sizesData = hasMultipleSizes
+        ? sizes
+            .filter((size) => size.size_name.trim() && size.price.trim())
+            .map((size) => ({
+              size_name: size.size_name.trim(),
+              price: parseFloat(size.price),
+            }))
+        : [
+            {
+              size_name: "Regular",
+              price: parseFloat(singlePrice),
+            },
+          ];
 
-      if (hasMultipleSizes) {
-        // Validate all sizes have name and price
-        const validSizes = sizes.filter(
-          (s) => s.size_name.trim() && s.price.trim()
-        );
-        if (validSizes.length === 0) {
-          alert("Please add at least one size with name and price");
-          return;
-        }
-        sizesData = validSizes.map((s) => ({
-          size_name: s.size_name.trim(),
-          price: parseFloat(s.price),
-        }));
-      } else {
-        if (!singlePrice.trim()) {
-          alert("Please enter a price");
-          return;
-        }
-        sizesData = [{ size_name: "Regular", price: parseFloat(singlePrice) }];
-      }
-
-      await onSave({
+      const itemData = {
         name: name.trim(),
         description: description.trim(),
         is_vegetarian: isVegetarian,
         has_multiple_sizes: hasMultipleSizes,
         sizes: sizesData,
-        image_url: imageUrl, // This will be a real URL, not a blob URL
-      });
+        image_url: finalImageUrl,
+      };
 
-      // Reset form
-      setName("");
-      setDescription("");
-      setIsVegetarian(false);
-      setHasMultipleSizes(false);
-      setSinglePrice("");
-      setSizes([{ size_name: "", price: "" }]);
-      setSelectedImageFile(null);
-      // imagePreviewUrl will be reset by useEffect
-
-      console.log("✅ Menu item saved successfully");
+      onSave(itemData);
     } catch (error) {
-      console.error("❌ Error saving item:", error);
-      alert("Failed to save item");
+      console.error("Error saving item:", error);
+      alert("Error saving item");
     } finally {
       setIsSaving(false);
       setIsUploadingImage(false);
     }
   };
 
-  const handleCancel = () => {
-    setName("");
-    setDescription("");
-    setIsVegetarian(false);
-    setHasMultipleSizes(false);
-    setSinglePrice("");
-    setSizes([{ size_name: "", price: "" }]);
-    setSelectedImageFile(null);
-    // imagePreviewUrl will be reset by useEffect
-    onDelete();
-  };
-
-  if (!isOpen) {
-    return (
-      <Card className="border border-dashed border-gray-300">
-        <CardContent className="p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">New Item</span>
-            <Button variant="ghost" size="sm" onClick={() => onToggle(true)}>
-              <Edit className="h-3 w-3" />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  if (!isOpen) return null;
 
   return (
-    <Card className="border border-primary">
+    <Card className="border bg-background">
       <CardContent className="p-4 space-y-4">
-        {/* Image Upload Section */}
-        <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h4 className="font-medium">
+            {isEditMode ? "Edit Menu Item" : "Add New Menu Item"}
+          </h4>
+          <Button variant="ghost" size="icon" onClick={() => onToggle(false)}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Item Name */}
+        <div>
+          <label className="text-sm font-medium">Item Name</label>
+          <Input
+            placeholder="Enter item name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
+
+        {/* Description */}
+        <div>
+          <label className="text-sm font-medium">Description</label>
+          <Textarea
+            placeholder="Enter item description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={2}
+          />
+        </div>
+
+        {/* Image Upload */}
+        <div>
           <label className="text-sm font-medium">Item Image</label>
-          <div className="flex items-center gap-4">
-            <div className="relative w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 overflow-hidden bg-gray-50">
+          <div className="flex items-center gap-4 mt-2">
+            <div className="relative w-20 h-20 rounded-md border overflow-hidden">
               <Image
                 src={imagePreviewUrl}
                 alt="Item preview"
                 fill
                 className="object-cover"
-                unoptimized // Prevent Next.js optimization issues with blob URLs
               />
             </div>
-            <div className="flex-1 space-y-2">
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    document.getElementById("image-upload")?.click()
-                  }
-                  className="gap-2"
-                  disabled={isUploadingImage}
-                >
-                  <Upload className="h-3 w-3" />
-                  {selectedImageFile ? "Change Image" : "Upload Image"}
-                </Button>
-                {selectedImageFile && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={removeImage}
-                    className="text-red-600 hover:text-red-700"
-                    disabled={isUploadingImage}
-                  >
-                    <X className="h-3 w-3" />
-                    Remove
-                  </Button>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {selectedImageFile
-                  ? `Selected: ${selectedImageFile.name}`
-                  : "Upload an image or use default"}
-              </p>
+            <div className="flex-1">
               <input
-                id="image-upload"
                 type="file"
                 accept="image/*"
                 onChange={handleImageSelect}
                 className="hidden"
+                id="image-upload"
               />
+              <label htmlFor="image-upload">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 cursor-pointer"
+                  asChild
+                >
+                  <span>
+                    <Upload className="h-4 w-4" />
+                    {selectedImageFile ? "Change Image" : "Upload Image"}
+                  </span>
+                </Button>
+              </label>
+              <p className="text-xs text-muted-foreground mt-1">
+                Upload an image for this item
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Basic Item Info */}
-        <div className="space-y-3">
-          <Input
-            placeholder="Item name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+        {/* Vegetarian Option */}
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="vegetarian"
+            checked={isVegetarian}
+            onCheckedChange={(checked) => setIsVegetarian(checked as boolean)}
           />
-          <Textarea
-            placeholder="Item description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={2}
-          />
+          <label htmlFor="vegetarian" className="text-sm font-medium">
+            Vegetarian Item
+          </label>
+        </div>
 
-          {/* Vegetarian Checkbox */}
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="vegetarian"
-              checked={isVegetarian}
-              onCheckedChange={(checked) => setIsVegetarian(!!checked)}
-            />
-            <label htmlFor="vegetarian" className="text-sm">
-              Vegetarian
-            </label>
+        {/* Pricing Type */}
+        <div>
+          <label className="text-sm font-medium">Pricing</label>
+          <div className="flex gap-4 mt-2">
+            <Button
+              variant={!hasMultipleSizes ? "default" : "outline"}
+              size="sm"
+              onClick={() => setHasMultipleSizes(false)}
+            >
+              Single Price
+            </Button>
+            <Button
+              variant={hasMultipleSizes ? "default" : "outline"}
+              size="sm"
+              onClick={() => setHasMultipleSizes(true)}
+            >
+              Multiple Sizes
+            </Button>
           </div>
         </div>
 
-        {/* Pricing Section */}
-        <div className="space-y-3">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="multipleSizes"
-              checked={hasMultipleSizes}
-              onCheckedChange={(checked) => setHasMultipleSizes(!!checked)}
-            />
-            <label htmlFor="multipleSizes" className="text-sm font-medium">
-              Multiple sizes with different prices
-            </label>
+        {/* Pricing Input */}
+        {hasMultipleSizes ? (
+          <div className="space-y-3">
+            <label className="text-sm font-medium">Size & Price Options</label>
+            {sizes.map((size, index) => (
+              <div key={index} className="flex gap-2">
+                <Input
+                  placeholder="Size name (e.g., Small, Medium)"
+                  value={size.size_name}
+                  onChange={(e) =>
+                    updateSize(index, "size_name", e.target.value)
+                  }
+                  className="flex-1"
+                />
+                <Input
+                  placeholder="Price"
+                  type="number"
+                  value={size.price}
+                  onChange={(e) => updateSize(index, "price", e.target.value)}
+                  className="w-24"
+                />
+                {sizes.length > 1 && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => removeSize(index)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            ))}
+            <Button variant="outline" size="sm" onClick={addSize}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Size
+            </Button>
           </div>
-
-          {!hasMultipleSizes ? (
-            // Single Price
-            <div className="flex items-center gap-2">
-              <span className="text-sm">Nu.</span>
-              <Input
-                type="number"
-                placeholder="Price"
-                value={singlePrice}
-                onChange={(e) => setSinglePrice(e.target.value)}
-                className="flex-1"
-              />
-            </div>
-          ) : (
-            // Multiple Sizes
-            <div className="space-y-2">
-              <div className="text-sm font-medium">Sizes & Prices:</div>
-              {sizes.map((size, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <Input
-                    placeholder="Size (e.g., Small, Medium)"
-                    value={size.size_name}
-                    onChange={(e) =>
-                      updateSize(index, "size_name", e.target.value)
-                    }
-                    className="flex-1"
-                  />
-                  <span className="text-sm">Nu.</span>
-                  <Input
-                    type="number"
-                    placeholder="Price"
-                    value={size.price}
-                    onChange={(e) => updateSize(index, "price", e.target.value)}
-                    className="w-24"
-                  />
-                  {sizes.length > 1 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeSize(index)}
-                      className="text-red-600"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
-              ))}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={addSize}
-                className="w-full"
-              >
-                <Plus className="h-3 w-3 mr-1" />
-                Add Size
-              </Button>
-            </div>
-          )}
-        </div>
+        ) : (
+          <div>
+            <label className="text-sm font-medium">Price (Nu.)</label>
+            <Input
+              placeholder="Enter price"
+              type="number"
+              value={singlePrice}
+              onChange={(e) => setSinglePrice(e.target.value)}
+            />
+          </div>
+        )}
 
         {/* Action Buttons */}
-        <div className="flex justify-end gap-2 pt-2 border-t">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleCancel}
-            disabled={isSaving || isUploadingImage}
-          >
-            <X className="h-3 w-3 mr-1" />
+        <div className="flex justify-end gap-2 pt-4 border-t">
+          <Button variant="outline" onClick={onDelete}>
             Cancel
           </Button>
-          <Button
-            size="sm"
-            onClick={handleSave}
-            disabled={!name.trim() || isSaving || isUploadingImage}
-          >
-            <Save className="h-3 w-3 mr-1" />
+          <Button onClick={handleSave} disabled={isSaving || isUploadingImage}>
             {isUploadingImage
               ? "Uploading..."
               : isSaving
               ? "Saving..."
+              : isEditMode
+              ? "Update Item"
               : "Save Item"}
           </Button>
         </div>
@@ -456,6 +451,7 @@ export default function CategoryCard({
   const [isEditingLocal, setIsEditingLocal] = useState(isEditing);
   const [editedTitle, setEditedTitle] = useState(title);
   const [showNewItemForm, setShowNewItemForm] = useState(false);
+  const [editingItem, setEditingItem] = useState<DatabaseMenuItem | null>(null);
   const isNewCategory = !title;
 
   React.useEffect(() => {
@@ -479,7 +475,7 @@ export default function CategoryCard({
         category_id: id,
         name: itemData.name,
         description: itemData.description,
-        image_url: itemData.image_url, // This should now be a real URL
+        image_url: itemData.image_url,
         is_vegetarian: itemData.is_vegetarian,
         is_custom: true,
         has_multiple_sizes: itemData.has_multiple_sizes,
@@ -489,7 +485,7 @@ export default function CategoryCard({
       if (result.success) {
         console.log("✅ Menu item created successfully");
         setShowNewItemForm(false);
-        window.location.reload(); // Refresh to show new item
+        window.location.reload();
       } else {
         console.error("❌ Failed to save menu item:", result.error);
         alert("Failed to save menu item: " + result.error);
@@ -497,6 +493,43 @@ export default function CategoryCard({
     } catch (error) {
       console.error("❌ Error saving menu item:", error);
       alert("Error saving menu item");
+    }
+  };
+
+  const handleSaveEditItem = async (itemData: {
+    name: string;
+    description: string;
+    is_vegetarian: boolean;
+    has_multiple_sizes: boolean;
+    sizes: Array<{ size_name: string; price: number }>;
+    image_url: string;
+  }) => {
+    if (!editingItem) return;
+
+    try {
+      console.log("💾 Updating menu item:", editingItem.id, itemData);
+
+      const result = await updateMenuItem(editingItem.id, {
+        name: itemData.name,
+        description: itemData.description,
+        image_url: itemData.image_url,
+        is_available: editingItem.is_available, // Keep current availability
+        is_vegetarian: itemData.is_vegetarian,
+        has_multiple_sizes: itemData.has_multiple_sizes,
+        sizes: itemData.sizes,
+      });
+
+      if (result.success) {
+        console.log("✅ Menu item updated successfully");
+        setEditingItem(null);
+        window.location.reload();
+      } else {
+        console.error("❌ Failed to update menu item:", result.error);
+        alert("Failed to update menu item: " + result.error);
+      }
+    } catch (error) {
+      console.error("❌ Error updating menu item:", error);
+      alert("Error updating menu item");
     }
   };
 
@@ -524,11 +557,9 @@ export default function CategoryCard({
         editedTitle: editedTitle.trim(),
       });
 
-      // Check if this is a temporary category (new category) or existing category
       const isTemporaryCategory = id.startsWith("temp-");
 
       if (isTemporaryCategory) {
-        // This is a new category - create in database
         console.log("🆕 Creating new category in database");
         try {
           const result = await createMenuCategory({
@@ -537,11 +568,9 @@ export default function CategoryCard({
           if (result.success) {
             console.log("✅ Category created successfully:", result.category);
             setIsEditingLocal(false);
-            // Call onSave to remove temp category from parent state
             if (onSave) {
               onSave(id, editedTitle.trim());
             }
-            // Refresh to show the new category from database
             window.location.reload();
           } else {
             console.error("❌ Failed to create category:", result.error);
@@ -552,12 +581,10 @@ export default function CategoryCard({
           alert("Error creating category");
         }
       } else if (onSave) {
-        // This is an existing category - just update title via parent callback
         console.log("📝 Updating existing category via onSave callback");
         onSave(id, editedTitle.trim());
         setIsEditingLocal(false);
       } else {
-        // Existing category but no onSave callback - update in database directly
         console.log("📝 Updating existing category in database");
         try {
           const result = await updateMenuCategory(id, {
@@ -588,7 +615,9 @@ export default function CategoryCard({
   };
 
   const getTotalItemCount = () => {
-    return existingItems.length + (showNewItemForm ? 1 : 0);
+    return (
+      existingItems.length + (showNewItemForm ? 1 : 0) + (editingItem ? 1 : 0)
+    );
   };
 
   const formatItemPrice = (item: DatabaseMenuItem) => {
@@ -721,67 +750,46 @@ export default function CategoryCard({
       </CardHeader>
 
       {isOpen && (
-        <CardContent className="p-4 pt-0 space-y-4">
+        <CardContent className="px-4 pb-4 space-y-3">
           {/* Existing Items */}
           {existingItems.map((item) => (
-            <Card key={item.id} className="border border-gray-200">
+            <Card key={item.id} className="border">
               <CardContent className="p-3">
                 <div className="flex items-center gap-3">
                   {/* Item Image */}
-                  <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+                  <div className="relative w-12 h-12 rounded-md overflow-hidden flex-shrink-0">
                     <Image
                       src={item.image_url || "/default-food-img.jpg"}
                       alt={item.name}
                       fill
                       className="object-cover"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = "/default-food-img.jpg";
-                      }}
                     />
                   </div>
 
                   {/* Item Details */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-medium text-sm truncate">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-medium truncate">
                         {item.name}
                       </h4>
                       {item.is_vegetarian && (
-                        <Badge
-                          variant="outline"
-                          className="text-xs bg-green-50 text-green-700 flex-shrink-0"
-                        >
+                        <Badge variant="outline" className="text-xs">
                           Veg
                         </Badge>
                       )}
-                      {!item.is_available && (
-                        <Badge
-                          variant="destructive"
-                          className="text-xs flex-shrink-0"
-                        >
-                          Unavailable
-                        </Badge>
-                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                      {item.description || "No description"}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">
-                        {formatItemPrice(item)}
-                      </span>
-                      {item.has_multiple_sizes && (
-                        <Badge variant="outline" className="text-xs">
-                          Multiple Sizes
-                        </Badge>
-                      )}
+                    {item.description && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        {item.description}
+                      </p>
+                    )}
+                    <div className="text-sm font-medium text-primary">
+                      {formatItemPrice(item)}
                     </div>
-                    {/* Show sizes if multiple */}
                     {item.has_multiple_sizes && item.sizes && (
-                      <div className="text-xs text-muted-foreground mt-1">
+                      <div className="text-xs text-muted-foreground">
                         {item.sizes
-                          .map((s) => `${s.size_name}: Nu. ${s.price}`)
+                          .map((s) => `${s.size_name}: Nu.${s.price}`)
                           .join(", ")}
                       </div>
                     )}
@@ -792,10 +800,7 @@ export default function CategoryCard({
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => {
-                        // TODO: Implement edit functionality
-                        console.log("Edit item:", item.id);
-                      }}
+                      onClick={() => setEditingItem(item)}
                     >
                       <Edit className="h-3 w-3" />
                     </Button>
@@ -813,6 +818,17 @@ export default function CategoryCard({
             </Card>
           ))}
 
+          {/* Edit Item Form */}
+          {editingItem && (
+            <MenuItemForm
+              isOpen={!!editingItem}
+              onToggle={(isOpen) => !isOpen && setEditingItem(null)}
+              onDelete={() => setEditingItem(null)}
+              onSave={handleSaveEditItem}
+              editItem={editingItem}
+            />
+          )}
+
           {/* New Item Form */}
           {showNewItemForm && (
             <MenuItemForm
@@ -828,14 +844,14 @@ export default function CategoryCard({
             variant="outline"
             className="w-full border-dashed border-primary text-primary hover:bg-primary/5"
             onClick={() => setShowNewItemForm(true)}
-            disabled={showNewItemForm}
+            disabled={showNewItemForm || !!editingItem}
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Item to {title}
           </Button>
 
           {/* Empty State */}
-          {existingItems.length === 0 && !showNewItemForm && (
+          {existingItems.length === 0 && !showNewItemForm && !editingItem && (
             <div className="text-center py-6 text-muted-foreground">
               <p className="text-sm">No items in this category yet</p>
               <p className="text-xs mt-1">

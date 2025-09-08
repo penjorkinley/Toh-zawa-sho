@@ -17,6 +17,8 @@ import {
   checkMenuSetupStatus,
   completeMenuSetup,
   getCompleteMenu,
+  deleteMenuCategory,
+  updateMenuCategory,
 } from "@/lib/actions/menu/actions";
 import { MenuSetupData } from "@/lib/types/menu-management";
 import { useRouter } from "next/navigation";
@@ -84,9 +86,9 @@ export default function MenuSetupPage() {
     async function checkSetupStatus() {
       try {
         setIsLoading(true);
-        console.log("🔍 Checking menu setup status...");
+        // console.log("🔍 Checking menu setup status...");
         const result = await checkMenuSetupStatus();
-        console.log("📊 Setup status result:", result);
+        // console.log("📊 Setup status result:", result);
 
         if (result.success && result.isSetupComplete) {
           setIsMenuAlreadySetup(true);
@@ -94,9 +96,9 @@ export default function MenuSetupPage() {
           setCurrentStep("manage");
 
           // Load existing menu data WITH items
-          console.log("📋 Loading complete menu...");
+          // console.log("📋 Loading complete menu...");
           const menuResult = await getCompleteMenu();
-          console.log("📋 Complete menu result:", menuResult);
+          // console.log("📋 Complete menu result:", menuResult);
 
           if (menuResult.success && menuResult.categories) {
             // Store complete menu data for CategoryCard
@@ -111,11 +113,11 @@ export default function MenuSetupPage() {
                 isEditing: false,
               })
             );
-            console.log("🏷️ Converted categories:", convertedCategories);
+            // console.log("🏷️ Converted categories:", convertedCategories);
             setManualCategories(convertedCategories);
           }
         } else {
-          console.log("🆕 Menu not setup yet, showing template flow");
+          // console.log("🆕 Menu not setup yet, showing template flow");
         }
       } catch (error) {
         console.error("❌ Error checking menu setup status:", error);
@@ -175,11 +177,9 @@ export default function MenuSetupPage() {
     );
   };
 
-  const handleSaveCategory = (categoryId: string, newTitle: string) => {
+  const handleSaveCategory = async (categoryId: string, newTitle: string) => {
     console.log("💾 handleSaveCategory called:", { categoryId, newTitle });
 
-    // This should only update local state, not create database entries
-    // Database creation is handled by CategoryCard component
     if (categoryId.startsWith("temp-")) {
       console.log(
         "🏷️ This is a temporary category, CategoryCard will handle database creation"
@@ -189,14 +189,52 @@ export default function MenuSetupPage() {
         categories.filter((category) => category.id !== categoryId)
       );
     } else {
-      console.log("📝 Updating existing category title in local state");
-      setManualCategories((categories) =>
-        categories.map((category) =>
-          category.id === categoryId
-            ? { ...category, title: newTitle, isEditing: false }
-            : category
-        )
+      console.log(
+        "📝 Updating existing category in both local state and database"
       );
+
+      try {
+        // First update the database
+        const result = await updateMenuCategory(categoryId, {
+          name: newTitle.trim(),
+        });
+
+        if (result.success) {
+          console.log("✅ Category updated successfully in database");
+
+          // Then update local state
+          setManualCategories((categories) =>
+            categories.map((category) =>
+              category.id === categoryId
+                ? { ...category, title: newTitle, isEditing: false }
+                : category
+            )
+          );
+
+          // Also update the complete menu data
+          setCompleteMenuData((menuData) =>
+            menuData.map((category) =>
+              category.id === categoryId
+                ? { ...category, name: newTitle }
+                : category
+            )
+          );
+
+          // Optional: Show success message
+          console.log("✅ Category name updated successfully");
+        } else {
+          console.error(
+            "❌ Failed to update category in database:",
+            result.error
+          );
+          alert(
+            "Failed to update category: " + (result.error || "Unknown error")
+          );
+        }
+      } catch (error) {
+        console.error("❌ Error updating category:", error);
+        alert("Error updating category. Please try again.");
+      }
     }
   };
 
@@ -227,21 +265,21 @@ export default function MenuSetupPage() {
           })),
       };
 
-      console.log("💾 Saving menu setup data:", setupData);
+      // console.log("💾 Saving menu setup data:", setupData);
       const result = await completeMenuSetup(setupData);
 
       if (!result.success) {
         throw new Error(result.error || "Failed to save menu");
       }
 
-      console.log("✅ Menu setup saved successfully");
+      // console.log("✅ Menu setup saved successfully");
 
       // 🔥 KEY FIX: Fetch fresh data from database instead of using frontend state
-      console.log("📋 Fetching fresh menu data from database...");
+      // console.log("📋 Fetching fresh menu data from database...");
       const menuResult = await getCompleteMenu();
 
       if (menuResult.success && menuResult.categories) {
-        console.log("📋 Fresh menu data:", menuResult.categories);
+        // console.log("📋 Fresh menu data:", menuResult.categories);
 
         // Store complete menu data for CategoryCard (with items!)
         setCompleteMenuData(menuResult.categories);
@@ -254,10 +292,10 @@ export default function MenuSetupPage() {
           isEditing: false,
         }));
 
-        console.log(
-          "🏷️ Converted categories with real IDs:",
-          convertedCategories
-        );
+        // console.log(
+        //   "🏷️ Converted categories with real IDs:",
+        //   convertedCategories
+        // );
         setManualCategories(convertedCategories);
 
         // Update state flags
@@ -281,18 +319,18 @@ export default function MenuSetupPage() {
   };
 
   const handleAddManualCategory = () => {
-    console.log("➕ Adding manual category");
+    // console.log("➕ Adding manual category");
     const newCategory = {
       id: `temp-category-${Date.now()}`, // Use temp- prefix for local categories
       title: "",
       isOpen: true,
       isEditing: true,
     };
-    console.log("🆕 New category object:", newCategory);
+    // console.log("🆕 New category object:", newCategory);
     setManualCategories((prev) => {
-      console.log("📋 Previous categories:", prev);
+      // console.log("📋 Previous categories:", prev);
       const updated = [...prev, newCategory];
-      console.log("📋 Updated categories:", updated);
+      // console.log("📋 Updated categories:", updated);
       return updated;
     });
   };
@@ -304,11 +342,61 @@ export default function MenuSetupPage() {
       )
     );
   };
+  const handleDeleteCategory = async (categoryId: string) => {
+    console.log("🗑️ Attempting to delete category:", categoryId);
 
-  const handleDeleteCategory = (categoryId: string) => {
-    setManualCategories((categories) =>
-      categories.filter((category) => category.id !== categoryId)
+    // Check if this is a temporary category (not yet saved to database)
+    const isTemporaryCategory = categoryId.startsWith("temp-");
+
+    if (isTemporaryCategory) {
+      // For temporary categories, just remove from local state
+      console.log("🏷️ Removing temporary category from local state");
+      setManualCategories((categories) =>
+        categories.filter((category) => category.id !== categoryId)
+      );
+      return;
+    }
+
+    // For real database categories, confirm deletion
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this category? This will also delete all items in this category. This action cannot be undone."
     );
+
+    if (!confirmDelete) {
+      return;
+    }
+
+    try {
+      console.log("🗑️ Deleting category from database:", categoryId);
+
+      // Call the API to delete from database
+      const result = await deleteMenuCategory(categoryId);
+
+      if (result.success) {
+        console.log("✅ Category deleted successfully from database");
+
+        // Remove from local state
+        setManualCategories((categories) =>
+          categories.filter((category) => category.id !== categoryId)
+        );
+
+        // Also remove from complete menu data
+        setCompleteMenuData((menuData) =>
+          menuData.filter((category) => category.id !== categoryId)
+        );
+
+        // Optional: Show success message
+        alert("Category deleted successfully!");
+      } else {
+        console.error("❌ Failed to delete category:", result.error);
+        alert(
+          "Failed to delete category: " + (result.error || "Unknown error")
+        );
+      }
+    } catch (error) {
+      console.error("❌ Error deleting category:", error);
+      alert("Error deleting category. Please try again.");
+    }
   };
 
   const startQuickSetup = () => {
@@ -344,20 +432,17 @@ export default function MenuSetupPage() {
           <div>
             <h1 className="text-2xl font-bold">Menu Management</h1>
             <p className="text-muted-foreground">
-              {isMenuAlreadySetup
-                ? "Manage your menu categories and items"
-                : "Manage your menu categories and items"}
+              Manage your menu categories and items
             </p>
-            {isMenuAlreadySetup && (
-              <p className="text-sm text-green-600 mt-1">
-                ✅ Menu setup completed
-              </p>
-            )}
           </div>
-          <Button onClick={startQuickSetup} variant="outline">
-            <Plus className="h-4 w-4 mr-2" />
-            {isMenuAlreadySetup ? "Add More Categories" : "Quick Setup"}
-          </Button>
+
+          {/* Only show template button if menu is NOT already setup */}
+          {!isMenuAlreadySetup && (
+            <Button onClick={startQuickSetup} variant="outline">
+              <Plus className="h-4 w-4 mr-2" />
+              Quick Setup
+            </Button>
+          )}
         </div>
 
         <div className="space-y-4">
@@ -375,7 +460,7 @@ export default function MenuSetupPage() {
                 title={category.title}
                 isOpen={category.isOpen}
                 isEditing={category.isEditing}
-                existingItems={existingItems} // Pass existing items
+                existingItems={existingItems}
                 onOpenChange={(isOpen) =>
                   handleCategoryOpenChange(category.id, isOpen)
                 }
@@ -385,7 +470,7 @@ export default function MenuSetupPage() {
             );
           })}
 
-          {/* Restore Add Custom Category Button */}
+          {/* Add Custom Category Button - Always available */}
           <Button
             variant="outline"
             className="w-full border-primary text-primary"
