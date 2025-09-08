@@ -13,6 +13,7 @@ interface ImageUploaderProps {
   onCoverPhotoChange: (file: File) => void;
   onLogoChange: (file: File) => void;
   uploading?: boolean;
+  businessName?: string;
 }
 
 export default function ImageUploader({
@@ -23,6 +24,7 @@ export default function ImageUploader({
   onCoverPhotoChange,
   onLogoChange,
   uploading = false,
+  businessName,
 }: ImageUploaderProps) {
   const coverPhotoInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -260,6 +262,15 @@ export default function ImageUploader({
           </div>
         )}
       </div>
+
+      {/* NEW: Business Name Display - Below Logo */}
+      {businessName && (
+        <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 text-center">
+          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 whitespace-nowrap">
+            {businessName}
+          </h2>
+        </div>
+      )}
     </div>
   );
 }

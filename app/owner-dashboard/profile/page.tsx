@@ -9,6 +9,7 @@ import {
   getProfileData,
   updateProfileData,
 } from "@/lib/actions/profile/actions";
+import { getSidebarData } from "@/lib/actions/user/actions"; // NEW: Import getSidebarData
 import toast from "react-hot-toast";
 
 export default function ProfilePage() {
@@ -22,30 +23,38 @@ export default function ProfilePage() {
     logoUrl: null as string | null,
   });
 
+  const [businessName, setBusinessName] = useState<string>(""); // NEW: State for business name
   const [loading, setLoading] = useState(true);
   const [uploadingImages, setUploadingImages] = useState(false);
 
-  // Load existing profile images
+  // Load existing profile images and business name
   useEffect(() => {
-    async function loadProfileImages() {
+    async function loadProfileData() {
       try {
         setLoading(true);
-        const result = await getProfileData();
 
-        if (result.success && result.data) {
+        // Fetch profile images
+        const profileResult = await getProfileData();
+        if (profileResult.success && profileResult.data) {
           setExistingImages({
-            coverPhotoUrl: result.data.cover_photo_url,
-            logoUrl: result.data.logo_url,
+            coverPhotoUrl: profileResult.data.cover_photo_url,
+            logoUrl: profileResult.data.logo_url,
           });
         }
+
+        // NEW: Fetch business name from sidebar data
+        const sidebarResult = await getSidebarData();
+        if (sidebarResult.success && sidebarResult.data) {
+          setBusinessName(sidebarResult.data.businessName);
+        }
       } catch (error) {
-        console.error("Error loading profile images:", error);
+        console.error("Error loading profile data:", error);
       } finally {
         setLoading(false);
       }
     }
 
-    loadProfileImages();
+    loadProfileData();
   }, []);
 
   const handleCoverPhotoChange = (file: File) => {
@@ -118,7 +127,9 @@ export default function ProfilePage() {
       <div className="lg:hidden">
         <div className="bg-white">
           {/* Image Uploader for Mobile */}
-          <div className="p-4">
+          <div className="p-4 pb-24">
+            {" "}
+            {/* NEW: Added extra bottom padding for business name */}
             {loading ? (
               <div className="flex items-center justify-center h-64">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -132,12 +143,13 @@ export default function ProfilePage() {
                 onCoverPhotoChange={handleCoverPhotoChange}
                 onLogoChange={handleLogoChange}
                 uploading={uploadingImages}
+                businessName={businessName}
               />
             )}
           </div>
 
           {/* Tabs for Mobile */}
-          <Tabs defaultValue="account" className="w-full px-4 mt-8">
+          <Tabs defaultValue="account" className="w-full px-4 mt-1">
             <TabsList className="grid w-full grid-cols-2 mb-4 bg-primary/80">
               <TabsTrigger value="account">Account Info</TabsTrigger>
               <TabsTrigger value="password">Change Password</TabsTrigger>
@@ -160,39 +172,34 @@ export default function ProfilePage() {
         <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-8 p-6 max-w-7xl mx-auto">
           {/* Left Column - Image Uploader */}
           <div className="lg:sticky lg:top-8 lg:h-fit">
-            {loading ? (
-              <div className="flex items-center justify-center h-64 bg-white rounded-lg border border-gray-200">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
-            ) : (
-              <ImageUploader
-                coverPhoto={formData.coverPhoto}
-                logo={formData.logo}
-                existingCoverUrl={existingImages.coverPhotoUrl}
-                existingLogoUrl={existingImages.logoUrl}
-                onCoverPhotoChange={handleCoverPhotoChange}
-                onLogoChange={handleLogoChange}
-                uploading={uploadingImages}
-              />
-            )}
+            <div className="pb-24">
+              {" "}
+              {/* NEW: Added extra bottom padding for business name */}
+              {loading ? (
+                <div className="flex items-center justify-center h-64">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : (
+                <ImageUploader
+                  coverPhoto={formData.coverPhoto}
+                  logo={formData.logo}
+                  existingCoverUrl={existingImages.coverPhotoUrl}
+                  existingLogoUrl={existingImages.logoUrl}
+                  onCoverPhotoChange={handleCoverPhotoChange}
+                  onLogoChange={handleLogoChange}
+                  uploading={uploadingImages}
+                  businessName={businessName} // NEW: Pass business name
+                />
+              )}
+            </div>
           </div>
 
           {/* Right Column - Tabs */}
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="lg:col-span-1">
             <Tabs defaultValue="account" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-primary/80 mb-6">
-                <TabsTrigger
-                  value="account"
-                  className="data-[state=active]:bg-white"
-                >
-                  Account Info
-                </TabsTrigger>
-                <TabsTrigger
-                  value="password"
-                  className="data-[state=active]:bg-white"
-                >
-                  Change Password
-                </TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 mb-6 bg-primary/80">
+                <TabsTrigger value="account">Account Info</TabsTrigger>
+                <TabsTrigger value="password">Change Password</TabsTrigger>
               </TabsList>
 
               <TabsContent value="account" className="mt-0">

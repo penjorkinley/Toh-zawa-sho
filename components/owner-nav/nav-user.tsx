@@ -1,8 +1,8 @@
-// Replace the entire components/owner-nav/nav-user.tsx file
 "use client";
 
 import { ChevronsUpDown, LogOut, User } from "lucide-react";
 import toast from "react-hot-toast";
+import { useRouter } from "next/navigation"; // NEW: Import useRouter
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -35,7 +35,13 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar();
   const { signOut } = useAuth();
+  const router = useRouter(); // NEW: Initialize useRouter
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  // NEW: Handle profile navigation
+  const handleProfileClick = () => {
+    router.push("/owner-dashboard/profile");
+  };
 
   const handleLogout = async () => {
     // Show confirmation dialog
@@ -106,7 +112,10 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem className="cursor-pointer">
+              <DropdownMenuItem
+                onClick={handleProfileClick} // NEW: Add onClick handler
+                className="cursor-pointer"
+              >
                 <User />
                 Profile
               </DropdownMenuItem>
