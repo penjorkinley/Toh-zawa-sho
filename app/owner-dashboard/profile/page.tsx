@@ -3,86 +3,208 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AccountInfo from "./_components/accountInfo";
 import ImageUploader from "@/components/ui/ImageUploader";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PasswordCard from "./_components/passwordCard";
+import {
+  getProfileData,
+  updateProfileData,
+} from "@/lib/actions/profile/actions";
+import toast from "react-hot-toast";
 
 export default function ProfilePage() {
-  // Add state for form data
   const [formData, setFormData] = useState({
-    coverPhoto: null,
-    logo: null,
+    coverPhoto: null as File | null,
+    logo: null as File | null,
   });
 
-  // Add handleFileChange function
-  const handleFileChange = (type: "coverPhoto" | "logo", file: File) => {
+  const [existingImages, setExistingImages] = useState({
+    coverPhotoUrl: null as string | null,
+    logoUrl: null as string | null,
+  });
+
+  const [loading, setLoading] = useState(true);
+  const [uploadingImages, setUploadingImages] = useState(false);
+
+  // Load existing profile images
+  useEffect(() => {
+    async function loadProfileImages() {
+      try {
+        setLoading(true);
+        const result = await getProfileData();
+
+        if (result.success && result.data) {
+          setExistingImages({
+            coverPhotoUrl: result.data.cover_photo_url,
+            logoUrl: result.data.logo_url,
+          });
+        }
+      } catch (error) {
+        console.error("Error loading profile images:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadProfileImages();
+  }, []);
+
+  const handleCoverPhotoChange = (file: File) => {
     setFormData((prev) => ({
       ...prev,
-      [type]: file,
+      coverPhoto: file,
     }));
   };
 
-  const handleCoverPhotoChange = (file: File) => {
-    if (file && handleFileChange) {
-      handleFileChange("coverPhoto", file);
+  const handleLogoChange = (file: File) => {
+    setFormData((prev) => ({
+      ...prev,
+      logo: file,
+    }));
+  };
+
+  const handleImageUpload = async () => {
+    if (!formData.coverPhoto && !formData.logo) {
+      return;
+    }
+
+    try {
+      setUploadingImages(true);
+
+      const updateData = {
+        coverPhoto: formData.coverPhoto,
+        logo: formData.logo,
+      };
+
+      const result = await updateProfileData(updateData);
+
+      if (result.success) {
+        toast.success("Images updated successfully!");
+
+        // Reload images to get updated URLs
+        const refreshResult = await getProfileData();
+        if (refreshResult.success && refreshResult.data) {
+          setExistingImages({
+            coverPhotoUrl: refreshResult.data.cover_photo_url,
+            logoUrl: refreshResult.data.logo_url,
+          });
+        }
+
+        // Clear form data
+        setFormData({
+          coverPhoto: null,
+          logo: null,
+        });
+      } else {
+        toast.error(result.error || "Failed to update images");
+      }
+    } catch (error) {
+      console.error("Error uploading images:", error);
+      toast.error("An unexpected error occurred");
+    } finally {
+      setUploadingImages(false);
     }
   };
 
-  const handleLogoChange = (file: File) => {
-    if (file && handleFileChange) {
-      handleFileChange("logo", file);
+  // Auto-upload when files are selected
+  useEffect(() => {
+    if (formData.coverPhoto || formData.logo) {
+      handleImageUpload();
     }
-  };
+  }, [formData.coverPhoto, formData.logo]);
 
   return (
-    <div className="w-full grid grid-cols-1 lg:grid-cols-2 p-4 space-x-2">
-      <div className="">
-        <div className="md:sticky md:top-8">
-          <ImageUploader
-            coverPhoto={formData.coverPhoto}
-            logo={formData.logo}
-            onCoverPhotoChange={handleCoverPhotoChange}
-            onLogoChange={handleLogoChange}
-          />
+    <div className="min-h-screen bg-gray-50 lg:bg-white">
+      {/* Mobile Layout */}
+      <div className="lg:hidden">
+        <div className="bg-white">
+          {/* Image Uploader for Mobile */}
+          <div className="p-4">
+            {loading ? (
+              <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              <ImageUploader
+                coverPhoto={formData.coverPhoto}
+                logo={formData.logo}
+                existingCoverUrl={existingImages.coverPhotoUrl}
+                existingLogoUrl={existingImages.logoUrl}
+                onCoverPhotoChange={handleCoverPhotoChange}
+                onLogoChange={handleLogoChange}
+                uploading={uploadingImages}
+              />
+            )}
+          </div>
 
-          {/* Adding spacing to balance the layout */}
-          <div className="mt-24 md:mt-20"></div>
+          {/* Tabs for Mobile */}
+          <Tabs defaultValue="account" className="w-full px-4 mt-8">
+            <TabsList className="grid w-full grid-cols-2 mb-4 bg-primary/80">
+              <TabsTrigger value="account">Account Info</TabsTrigger>
+              <TabsTrigger value="password">Change Password</TabsTrigger>
+            </TabsList>
+
+            <div className="pb-4">
+              <TabsContent value="account" className="mt-0">
+                <AccountInfo />
+              </TabsContent>
+              <TabsContent value="password" className="mt-0">
+                <PasswordCard />
+              </TabsContent>
+            </div>
+          </Tabs>
         </div>
       </div>
-      <Tabs defaultValue="account" className="relative">
-        <TabsList className="grid w-full grid-cols-2 border-2 bg-primary/40 my-auto sticky">
-          <TabsTrigger value="account">Account</TabsTrigger>
-          <TabsTrigger value="password">Password</TabsTrigger>
-        </TabsList>
-        <TabsContent value="account">
-          {/* <Card>
-            <CardHeader>
-              <CardTitle>Account</CardTitle>
-              <CardDescription>
-                Make changes to your account here. Click save when you&apos;re
-                done.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="space-y-1">
-                <Label htmlFor="name">Name</Label>
-                <Input id="name" defaultValue="Pedro Duarte" />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="username">Username</Label>
-                <Input id="username" defaultValue="@peduarte" />
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button>Save changes</Button>
-            </CardFooter>
-          </Card> */}
 
-          <AccountInfo />
-        </TabsContent>
-        <TabsContent value="password">
-          <PasswordCard />
-        </TabsContent>
-      </Tabs>
+      {/* Desktop Layout */}
+      <div className="hidden lg:block">
+        <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-8 p-6 max-w-7xl mx-auto">
+          {/* Left Column - Image Uploader */}
+          <div className="lg:sticky lg:top-8 lg:h-fit">
+            {loading ? (
+              <div className="flex items-center justify-center h-64 bg-white rounded-lg border border-gray-200">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              <ImageUploader
+                coverPhoto={formData.coverPhoto}
+                logo={formData.logo}
+                existingCoverUrl={existingImages.coverPhotoUrl}
+                existingLogoUrl={existingImages.logoUrl}
+                onCoverPhotoChange={handleCoverPhotoChange}
+                onLogoChange={handleLogoChange}
+                uploading={uploadingImages}
+              />
+            )}
+          </div>
+
+          {/* Right Column - Tabs */}
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <Tabs defaultValue="account" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 bg-primary/80 mb-6">
+                <TabsTrigger
+                  value="account"
+                  className="data-[state=active]:bg-white"
+                >
+                  Account Info
+                </TabsTrigger>
+                <TabsTrigger
+                  value="password"
+                  className="data-[state=active]:bg-white"
+                >
+                  Change Password
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="account" className="mt-0">
+                <AccountInfo />
+              </TabsContent>
+              <TabsContent value="password" className="mt-0">
+                <PasswordCard />
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

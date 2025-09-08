@@ -1,59 +1,53 @@
-import { useRef, useState, useEffect, useMemo } from "react";
+"use client";
+
+import { useRef, useState, useEffect } from "react";
 import Image from "next/image";
+import { Camera, Upload, X } from "lucide-react";
+import { Button } from "@/components/ui/shadcn-button";
 
 interface ImageUploaderProps {
   coverPhoto: File | null;
   logo: File | null;
+  existingCoverUrl?: string | null;
+  existingLogoUrl?: string | null;
   onCoverPhotoChange: (file: File) => void;
   onLogoChange: (file: File) => void;
-  coverPhotoPreview?: string | null;
-  logoPreview?: string | null;
+  uploading?: boolean;
 }
 
 export default function ImageUploader({
   coverPhoto,
   logo,
+  existingCoverUrl,
+  existingLogoUrl,
   onCoverPhotoChange,
   onLogoChange,
-  coverPhotoPreview = null,
-  logoPreview = null,
+  uploading = false,
 }: ImageUploaderProps) {
-  // Track if URLs were created locally to manage cleanup correctly
-  const locallyCreatedUrls = useRef<{
-    cover: boolean;
-    logo: boolean;
-  }>({
-    cover: false,
-    logo: false,
-  });
+  const coverPhotoInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
-  // Memoize the preview URLs to prevent unnecessary recreations
-  const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(
-    coverPhotoPreview
-  );
-  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(
-    logoPreview
-  );
+  const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
 
-  // Generate URLs only when needed (file exists but URL doesn't)
+  // Track locally created URLs to clean them up
+  const locallyCreatedUrls = useRef({ cover: false, logo: false });
+
   useEffect(() => {
-    // Handle cover photo URL
-    if (coverPhoto && !coverPreviewUrl) {
-      const imageUrl = URL.createObjectURL(coverPhoto);
-      setCoverPreviewUrl(imageUrl);
-      locallyCreatedUrls.current.cover = true;
+    // Set existing images as preview URLs
+    if (existingCoverUrl && !coverPhoto) {
+      setCoverPreviewUrl(existingCoverUrl);
+      locallyCreatedUrls.current.cover = false;
     }
-
-    // Handle logo URL
-    if (logo && !logoPreviewUrl) {
-      const imageUrl = URL.createObjectURL(logo);
-      setLogoPreviewUrl(imageUrl);
-      locallyCreatedUrls.current.logo = true;
+    if (existingLogoUrl && !logo) {
+      setLogoPreviewUrl(existingLogoUrl);
+      locallyCreatedUrls.current.logo = false;
     }
+  }, [existingCoverUrl, existingLogoUrl, coverPhoto, logo]);
 
-    // Cleanup function
+  // Cleanup object URLs on unmount
+  useEffect(() => {
     return () => {
-      // Only revoke URLs we created locally (not ones passed as props)
       if (coverPreviewUrl && locallyCreatedUrls.current.cover) {
         URL.revokeObjectURL(coverPreviewUrl);
       }
@@ -61,14 +55,23 @@ export default function ImageUploader({
         URL.revokeObjectURL(logoPreviewUrl);
       }
     };
-  }, [coverPhoto, logo, coverPreviewUrl, logoPreviewUrl]);
-
-  const coverPhotoInputRef = useRef<HTMLInputElement>(null);
-  const logoInputRef = useRef<HTMLInputElement>(null);
+  }, []);
 
   const handleCoverPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert("File size must be less than 5MB");
+        return;
+      }
+
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        alert("Please select an image file");
+        return;
+      }
 
       // Revoke previous URL if it was created locally
       if (coverPreviewUrl && locallyCreatedUrls.current.cover) {
@@ -85,6 +88,18 @@ export default function ImageUploader({
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+
+      // Validate file size (max 2MB for logo)
+      if (file.size > 2 * 1024 * 1024) {
+        alert("Logo file size must be less than 2MB");
+        return;
+      }
+
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        alert("Please select an image file");
+        return;
+      }
 
       // Revoke previous URL if it was created locally
       if (logoPreviewUrl && locallyCreatedUrls.current.logo) {
@@ -106,144 +121,144 @@ export default function ImageUploader({
     logoInputRef.current?.click();
   };
 
+  const removeCoverPhoto = () => {
+    if (coverPreviewUrl && locallyCreatedUrls.current.cover) {
+      URL.revokeObjectURL(coverPreviewUrl);
+    }
+    setCoverPreviewUrl(null);
+    locallyCreatedUrls.current.cover = false;
+    if (coverPhotoInputRef.current) {
+      coverPhotoInputRef.current.value = "";
+    }
+  };
+
+  const removeLogo = () => {
+    if (logoPreviewUrl && locallyCreatedUrls.current.logo) {
+      URL.revokeObjectURL(logoPreviewUrl);
+    }
+    setLogoPreviewUrl(null);
+    locallyCreatedUrls.current.logo = false;
+    if (logoInputRef.current) {
+      logoInputRef.current.value = "";
+    }
+  };
+
   return (
     <div className="relative">
+      {/* Hidden file inputs */}
+      <input
+        type="file"
+        ref={coverPhotoInputRef}
+        onChange={handleCoverPhotoChange}
+        accept="image/*"
+        className="hidden"
+      />
+      <input
+        type="file"
+        ref={logoInputRef}
+        onChange={handleLogoChange}
+        accept="image/*"
+        className="hidden"
+      />
+
       {/* Cover Photo */}
-      <div className="relative w-full h-48 sm:h-56 md:h-64 lg:h-80 bg-gray-100 rounded-md md:rounded-lg overflow-hidden shadow-sm">
+      <div className="relative w-full h-48 sm:h-56 md:h-64 lg:h-80 bg-gray-100 rounded-md md:rounded-lg overflow-hidden shadow-sm group">
         {coverPreviewUrl ? (
-          <Image
-            src={coverPreviewUrl}
-            alt="Cover Photo"
-            fill
-            className="object-cover"
-          />
+          <>
+            <Image
+              src={coverPreviewUrl}
+              alt="Cover photo"
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 50vw"
+            />
+            {/* Cover photo overlay */}
+            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={triggerCoverPhotoInput}
+                  disabled={uploading}
+                  className="bg-white/90 hover:bg-white text-gray-900"
+                >
+                  <Camera className="h-4 w-4 mr-1" />
+                  Change
+                </Button>
+                {(coverPhoto || existingCoverUrl) && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={removeCoverPhoto}
+                    disabled={uploading}
+                    className="bg-white/90 hover:bg-white text-gray-900"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Remove
+                  </Button>
+                )}
+              </div>
+            </div>
+          </>
         ) : (
-          <div className="flex items-center justify-center h-full">
-            <button
-              type="button"
-              onClick={triggerCoverPhotoInput}
-              className="flex items-center gap-2 bg-white px-4 py-2 rounded-md shadow-sm hover:bg-gray-50 transition-colors"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="lucide lucide-image-plus"
-              >
-                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7" />
-                <line x1="16" x2="22" y1="5" y2="5" />
-                <line x1="19" x2="19" y1="2" y2="8" />
-                <circle cx="9" cy="9" r="2" />
-                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
-              </svg>
-              Add cover photo
-            </button>
+          <div
+            onClick={triggerCoverPhotoInput}
+            className="flex flex-col items-center justify-center h-full cursor-pointer hover:bg-gray-200 transition-colors"
+          >
+            <Upload className="h-8 w-8 text-gray-400 mb-2" />
+            <p className="text-gray-500 text-sm text-center px-4">
+              Click to upload cover photo
+              <br />
+              <span className="text-xs text-gray-400">(Max 5MB, JPG/PNG)</span>
+            </p>
           </div>
         )}
-        <input
-          ref={coverPhotoInputRef}
-          type="file"
-          name="coverPhoto"
-          accept="image/*"
-          className="hidden"
-          onChange={handleCoverPhotoChange}
-        />
-        {coverPreviewUrl && (
-          <button
-            type="button"
-            onClick={triggerCoverPhotoInput}
-            className="absolute top-2 right-2 bg-white p-1 rounded-md shadow-sm hover:bg-gray-50 transition-colors"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="lucide lucide-pencil"
-            >
-              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-              <path d="m15 5 4 4" />
-            </svg>
-          </button>
+
+        {/* Upload progress indicator */}
+        {uploading && (
+          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <div className="bg-white rounded-lg p-4 flex items-center gap-3">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              <span className="text-gray-700">Uploading...</span>
+            </div>
+          </div>
         )}
       </div>
 
-      {/* Logo - Overlapping the cover photo */}
-      <div className="absolute -bottom-12 sm:-bottom-14 left-1/2 transform -translate-x-1/2">
-        <div className="relative w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 bg-gray-100 rounded-full overflow-hidden border-4 border-white shadow-md">
-          {logoPreviewUrl ? (
+      {/* Logo - Centered and Larger */}
+      <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 lg:w-36 lg:h-36 bg-white rounded-full shadow-lg overflow-hidden border-4 border-white group">
+        {logoPreviewUrl ? (
+          <>
             <Image
               src={logoPreviewUrl}
-              alt="Logo"
+              alt="Business logo"
               fill
               className="object-cover"
+              sizes="(max-width: 640px) 96px, (max-width: 768px) 112px, (max-width: 1024px) 128px, 144px"
             />
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#9ca3af"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="lucide lucide-package sm:w-7 sm:h-7 md:w-8 md:h-8"
-              >
-                <path d="m16.5 9.4-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                <path d="m3.29 7 8.5 4.5L21 8M12 22V12" />
-              </svg>
-              <span className="text-gray-400 text-sm mt-1">Logo</span>
+            {/* Logo overlay */}
+            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 flex items-center justify-center">
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={triggerLogoInput}
+                  disabled={uploading}
+                  className="p-2 h-auto bg-white/90 hover:bg-white text-gray-900"
+                >
+                  <Camera className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-          )}
-          <input
-            ref={logoInputRef}
-            type="file"
-            name="logo"
-            accept="image/*"
-            className="hidden"
-            onChange={handleLogoChange}
-          />
-
-          {/* Enhanced Edit Button for Logo - Hover Overlay Only */}
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black bg-opacity-40 rounded-full">
-            <button
-              type="button"
-              onClick={triggerLogoInput}
-              className="bg-primary text-white px-3 py-1.5 rounded-full shadow-md hover:bg-primary/90 transition-colors flex items-center gap-1.5"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="lucide lucide-pencil"
-              >
-                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                <path d="m15 5 4 4" />
-              </svg>
-              Edit
-            </button>
+          </>
+        ) : (
+          <div
+            onClick={triggerLogoInput}
+            className="flex items-center justify-center h-full bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors"
+          >
+            <Camera className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400" />
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
