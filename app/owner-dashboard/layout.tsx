@@ -1,3 +1,4 @@
+// Replace the entire app/owner-dashboard/layout.tsx file
 import React from "react";
 import { AppSidebar } from "@/components/owner-nav/app-sidebar";
 import { Breadcrumbs } from "@/components/breadcrumbs";

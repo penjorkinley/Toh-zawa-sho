@@ -1,7 +1,5 @@
-"use client";
-
-import { LayoutGrid, Utensils, UtensilsCrossed } from "lucide-react";
-import type * as React from "react";
+// Replace the entire components/owner-nav/app-sidebar.tsx file
+import { UtensilsCrossed } from "lucide-react";
 
 import {
   Sidebar,
@@ -12,69 +10,86 @@ import {
 } from "@/components/ui/sidebar";
 import { NavMain } from "./nav-main";
 import { NavUser } from "./nav-user";
+import { getSidebarData } from "@/lib/actions/user/actions";
 
-// This is sample data.
-const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+// Navigation items with string icon identifiers instead of components
+const navItems = [
+  {
+    title: "Menu Setup",
+    url: "menu-setup",
+    icon: "Utensils" as const,
   },
-  navMain: [
-    // {
-    //   title: "Order",
-    //   url: "order",
-    //   icon: ShoppingCart,
-    //   isActive: true,
-    // },
-    {
-      title: "Menu Setup",
-      url: "menu-setup",
-      icon: Utensils,
-    },
-    {
-      title: "Tables",
-      url: "tables",
-      icon: LayoutGrid,
-    },
-    // {
-    //   title: "Employee",
-    //   url: "employee",
-    //   icon: Users,
-    // },
-  ],
-};
+  {
+    title: "Tables",
+    url: "tables",
+    icon: "LayoutGrid" as const,
+  },
+];
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export async function AppSidebar({
+  ...props
+}: React.ComponentProps<typeof Sidebar>) {
+  // Fetch dynamic data
+  const sidebarResult = await getSidebarData();
+
+  // Fallback data for error cases
+  const fallbackData = {
+    businessName: "Your Business",
+    businessType: "Restaurant",
+    logoUrl: undefined,
+    email: "user@example.com",
+    initials: "YB",
+  };
+
+  const sidebarData = sidebarResult.success
+    ? sidebarResult.data!
+    : fallbackData;
+
+  // Format business type for display
+  const formatBusinessType = (type: string): string => {
+    return type
+      .split(/[-_]/)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  };
+
   return (
     <Sidebar className="bg-background" collapsible="icon" {...props}>
+      {/* Header Section - Business Info */}
       <SidebarHeader>
         <div className="flex items-center gap-3 px-2 py-2 group-data-[collapsible=icon]:justify-center">
+          {/* Business Logo/Icon - Always static */}
           <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground p-2">
-            <UtensilsCrossed className="h-6 w-6 " />
+            <UtensilsCrossed className="h-6 w-6" />
           </div>
+
+          {/* Business Name and Type */}
           <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-            <span className="text-lg font-bold leading-none">Bistro</span>
-            <span className="text-xs text-muted-foreground">Fine Dining</span>
+            <span className="text-lg font-bold leading-none">
+              {sidebarData.businessName}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {formatBusinessType(sidebarData.businessType)}
+            </span>
           </div>
         </div>
       </SidebarHeader>
+
+      {/* Navigation Content */}
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={navItems} />
       </SidebarContent>
+
+      {/* Footer Section - User Info */}
       <SidebarFooter>
-        {/* <div className="flex items-center gap-3 p-2 group-data-[collapsible=icon]:justify-center">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-            <span className="text-sm font-medium">CN</span>
-          </div>
-          <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-            <span className="text-sm font-medium">{data.user.name}</span>
-            <span className="text-xs text-muted-foreground">
-              {data.user.email}
-            </span>
-          </div>
-        </div> */}
-        <NavUser user={data.user} />
+        <NavUser
+          user={{
+            name: sidebarData.businessName,
+            email: sidebarData.email,
+            avatar: sidebarData.logoUrl || `/placeholder-avatar.jpg`, // Use dynamic logo with fallback
+            initials: sidebarData.initials,
+          }}
+        />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
