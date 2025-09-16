@@ -6,7 +6,7 @@ import { secondStepSchema } from "@/lib/validations/auth/signup";
 import type { SignupFormData } from "@/lib/validations/auth/signup";
 import AuthLayout from "@/components/auth/AuthLayout";
 import FormContainer from "@/components/auth/FormContainer";
-import Button from "@/components/ui/Button";
+import { Button } from "@/components/ui/shadcn-button";
 import BackButton from "@/components/ui/BackButton";
 
 interface SecondStepSignupProps {

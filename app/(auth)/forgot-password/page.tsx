@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import FormContainer from "@/components/auth/FormContainer";
 import InputField from "@/components/ui/InputField";
-import Button from "@/components/ui/Button";
+import { Button } from "@/components/ui/shadcn-button";
 import BackButton from "@/components/ui/BackButton";
 import Link from "next/link";
 import Image from "next/image";

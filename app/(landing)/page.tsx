@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import Button from "@/components/ui/Button";
+import { Button } from "@/components/ui/shadcn-button";
 
 export default function LandingPage() {
   // Feature items for the right column
@@ -70,9 +70,14 @@ export default function LandingPage() {
         </div>
 
         {/* Join Us button - centered below the grid */}
-        <div className="mt-8 mb-12 flex justify-center">
-          <Link href="/signup" className="w-full max-w-xs">
-            <Button>Join Us!</Button>
+        <div className="w-full flex justify-center items-center mt-20 mb-8 sm:mb-0">
+          <Link
+            href="/signup"
+            className="w-full max-w-[90%] sm:max-w-[70%] md:max-w-[50%] lg:max-w-[30%] xl:max-w-[15%]"
+          >
+            <Button className="w-full text-base" size="lg">
+              Join Us!
+            </Button>
           </Link>
         </div>
       </div>

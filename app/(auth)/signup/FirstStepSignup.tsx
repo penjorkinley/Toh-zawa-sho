@@ -6,7 +6,7 @@ import { firstStepSchema } from "@/lib/validations/auth/signup";
 import AuthLayout from "@/components/auth/AuthLayout";
 import FormContainer from "@/components/auth/FormContainer";
 import InputField from "@/components/ui/InputField";
-import Button from "@/components/ui/Button";
+import { Button } from "@/components/ui/shadcn-button";
 import type { SignupFormData } from "@/lib/validations/auth/signup";
 
 interface FirstStepSignupProps {
@@ -145,7 +145,7 @@ export default function FirstStepSignup({
             >
               Next
             </Button>
-            <p className="text-center text-sm lg:text-base mt-6 lg:mt-8 mb-4 lg:mb-6 text-text">
+            <p className="text-center text-sm lg:text-sm mt-6 lg:mt-8 mb-4 lg:mb-6 text-text">
               Already have an account?{" "}
               <Link
                 href="/login"
