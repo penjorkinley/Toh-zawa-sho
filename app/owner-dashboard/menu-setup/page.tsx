@@ -33,6 +33,7 @@ interface SelectedCategory {
     price: string;
     isCustom?: boolean;
     image?: string;
+    isVegetarian?: boolean; // Add vegetarian status
   }>;
 }
 
@@ -256,7 +257,7 @@ export default function MenuSetupPage() {
               description: item.description,
               price: item.price,
               image_url: item.image,
-              is_vegetarian: false, // You may want to add this field to your UI
+              is_vegetarian: item.isVegetarian, // Use the vegetarian status from item
               template_item_id: item.isCustom
                 ? undefined
                 : `${cat.template.id}-${item.name}`,

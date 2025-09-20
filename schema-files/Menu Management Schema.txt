@@ -1,0 +1,239 @@
+Menu Management Schema.txt
+
+-- Complete Menu Management Schema
+-- Combines initial schema with sizes support modifications
+
+-- Menu Categories Table
+CREATE TABLE public.menu_categories (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  business_id UUID NOT NULL REFERENCES public.business_information(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  display_order INTEGER NOT NULL DEFAULT 0,
+  is_active BOOLEAN DEFAULT true,
+  template_id TEXT, -- Reference to original template id for tracking
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- Menu Items Table (with sizes support and image_url from the start)
+CREATE TABLE public.menu_items (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  category_id UUID NOT NULL REFERENCES public.menu_categories(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  image_url TEXT,
+  is_available BOOLEAN DEFAULT true,
+  is_vegetarian BOOLEAN DEFAULT false,
+  has_multiple_sizes BOOLEAN DEFAULT false,
+  display_order INTEGER NOT NULL DEFAULT 0,
+  template_item_id TEXT, -- Reference to original template item for tracking
+  is_custom BOOLEAN DEFAULT false, -- Track if item was added manually vs from template
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- Menu Item Sizes Table (for items with multiple size options)
+-- For single-size items, we'll still use a size entry with name "Regular"
+-- This keeps the data model consistent
+CREATE TABLE public.menu_item_sizes (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  item_id UUID NOT NULL REFERENCES public.menu_items(id) ON DELETE CASCADE,
+  size_name TEXT NOT NULL, -- e.g., "Small", "Medium", "Large", "Regular"
+  price DECIMAL(10,2) NOT NULL,
+  display_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- Menu Setup Status Table (to track if restaurant has completed menu setup)
+CREATE TABLE public.menu_setup_status (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  business_id UUID NOT NULL REFERENCES public.business_information(id) ON DELETE CASCADE,
+  is_setup_complete BOOLEAN DEFAULT false,
+  setup_completed_at TIMESTAMP WITH TIME ZONE,
+  total_categories INTEGER DEFAULT 0,
+  total_items INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  UNIQUE(business_id)
+);
+
+-- Add triggers for updated_at timestamps
+CREATE TRIGGER handle_menu_categories_updated_at
+  BEFORE UPDATE ON public.menu_categories
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_updated_at();
+
+CREATE TRIGGER handle_menu_items_updated_at
+  BEFORE UPDATE ON public.menu_items
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_updated_at();
+
+CREATE TRIGGER handle_menu_item_sizes_updated_at
+  BEFORE UPDATE ON public.menu_item_sizes
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_updated_at();
+
+CREATE TRIGGER handle_menu_setup_status_updated_at
+  BEFORE UPDATE ON public.menu_setup_status
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_updated_at();
+
+-- Create indexes for better performance
+CREATE INDEX idx_menu_categories_business_id ON public.menu_categories(business_id);
+CREATE INDEX idx_menu_categories_display_order ON public.menu_categories(display_order);
+CREATE INDEX idx_menu_items_category_id ON public.menu_items(category_id);
+CREATE INDEX idx_menu_items_display_order ON public.menu_items(display_order);
+CREATE INDEX idx_menu_items_available ON public.menu_items(is_available);
+CREATE INDEX idx_menu_item_sizes_item_id ON public.menu_item_sizes(item_id);
+CREATE INDEX idx_menu_item_sizes_display_order ON public.menu_item_sizes(display_order);
+CREATE INDEX idx_menu_setup_status_business_id ON public.menu_setup_status(business_id);
+
+-- Enable Row Level Security on all tables
+ALTER TABLE public.menu_categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.menu_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.menu_item_sizes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.menu_setup_status ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for menu_categories
+CREATE POLICY "Users can view own menu categories" ON public.menu_categories
+  FOR SELECT USING (
+    business_id IN (
+      SELECT id FROM public.business_information WHERE user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can insert own menu categories" ON public.menu_categories
+  FOR INSERT WITH CHECK (
+    business_id IN (
+      SELECT id FROM public.business_information WHERE user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can update own menu categories" ON public.menu_categories
+  FOR UPDATE USING (
+    business_id IN (
+      SELECT id FROM public.business_information WHERE user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can delete own menu categories" ON public.menu_categories
+  FOR DELETE USING (
+    business_id IN (
+      SELECT id FROM public.business_information WHERE user_id = auth.uid()
+    )
+  );
+
+-- RLS Policies for menu_items
+CREATE POLICY "Users can view own menu items" ON public.menu_items
+  FOR SELECT USING (
+    category_id IN (
+      SELECT mc.id FROM public.menu_categories mc
+      JOIN public.business_information bi ON mc.business_id = bi.id
+      WHERE bi.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can insert own menu items" ON public.menu_items
+  FOR INSERT WITH CHECK (
+    category_id IN (
+      SELECT mc.id FROM public.menu_categories mc
+      JOIN public.business_information bi ON mc.business_id = bi.id
+      WHERE bi.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can update own menu items" ON public.menu_items
+  FOR UPDATE USING (
+    category_id IN (
+      SELECT mc.id FROM public.menu_categories mc
+      JOIN public.business_information bi ON mc.business_id = bi.id
+      WHERE bi.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can delete own menu items" ON public.menu_items
+  FOR DELETE USING (
+    category_id IN (
+      SELECT mc.id FROM public.menu_categories mc
+      JOIN public.business_information bi ON mc.business_id = bi.id
+      WHERE bi.user_id = auth.uid()
+    )
+  );
+
+-- RLS Policies for menu_item_sizes
+CREATE POLICY "Users can view own menu item sizes" ON public.menu_item_sizes
+  FOR SELECT USING (
+    item_id IN (
+      SELECT mi.id FROM public.menu_items mi
+      JOIN public.menu_categories mc ON mi.category_id = mc.id
+      JOIN public.business_information bi ON mc.business_id = bi.id
+      WHERE bi.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can manage own menu item sizes" ON public.menu_item_sizes
+  FOR ALL USING (
+    item_id IN (
+      SELECT mi.id FROM public.menu_items mi
+      JOIN public.menu_categories mc ON mi.category_id = mc.id
+      JOIN public.business_information bi ON mc.business_id = bi.id
+      WHERE bi.user_id = auth.uid()
+    )
+  );
+
+-- RLS Policies for menu_setup_status
+CREATE POLICY "Users can view own menu setup status" ON public.menu_setup_status
+  FOR SELECT USING (
+    business_id IN (
+      SELECT id FROM public.business_information WHERE user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can manage own menu setup status" ON public.menu_setup_status
+  FOR ALL USING (
+    business_id IN (
+      SELECT id FROM public.business_information WHERE user_id = auth.uid()
+    )
+  );
+
+-- Super admin policies (view all for management purposes)
+CREATE POLICY "Super admins can view all menu categories" ON public.menu_categories
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.user_profiles 
+      WHERE id = auth.uid() AND role = 'super-admin' AND status = 'approved'
+    )
+  );
+
+CREATE POLICY "Super admins can view all menu items" ON public.menu_items
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.user_profiles 
+      WHERE id = auth.uid() AND role = 'super-admin' AND status = 'approved'
+    )
+  );
+
+CREATE POLICY "Super admins can view all menu item sizes" ON public.menu_item_sizes
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.user_profiles 
+      WHERE id = auth.uid() AND role = 'super-admin' AND status = 'approved'
+    )
+  );
+
+CREATE POLICY "Super admins can view all menu setup status" ON public.menu_setup_status
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.user_profiles 
+      WHERE id = auth.uid() AND role = 'super-admin' AND status = 'approved'
+    )
+  );
+
+-- Grant permissions to all required roles
+GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role;
+GRANT ALL ON public.menu_categories TO postgres, anon, authenticated, service_role;
+GRANT ALL ON public.menu_items TO postgres, anon, authenticated, service_role;
+GRANT ALL ON public.menu_item_sizes TO postgres, anon, authenticated, service_role;
+GRANT ALL ON public.menu_setup_status TO postgres, anon, authenticated, service_role;

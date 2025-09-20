@@ -1,0 +1,79 @@
+Restaurant Management User System Setup
+
+-- Create user profiles table
+CREATE TABLE public.user_profiles (
+  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+  business_name TEXT NOT NULL,
+  phone_number TEXT NOT NULL,
+  business_license_url TEXT,
+  role TEXT NOT NULL CHECK (role IN ('super-admin', 'restaurant-owner')),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  first_login BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+-- Create updated_at trigger function
+CREATE OR REPLACE FUNCTION public.handle_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = TIMEZONE('utc'::text, NOW());
+  RETURN NEW;
+END;
+$$ language 'plpgsql';
+-- Add trigger for updated_at
+CREATE TRIGGER handle_user_profiles_updated_at
+  BEFORE UPDATE ON public.user_profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_updated_at();
+-- Create signup requests table (for tracking approval process)
+CREATE TABLE public.signup_requests (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  business_name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone_number TEXT NOT NULL,
+  business_license_url TEXT,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  reviewed_at TIMESTAMP WITH TIME ZONE,
+  reviewed_by UUID REFERENCES auth.users(id)
+);
+-- Add trigger for signup_requests updated_at
+CREATE TRIGGER handle_signup_requests_updated_at
+  BEFORE UPDATE ON public.signup_requests
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_updated_at();
+-- Create indexes for faster queries
+CREATE INDEX idx_user_profiles_role ON public.user_profiles(role);
+CREATE INDEX idx_user_profiles_status ON public.user_profiles(status);
+CREATE INDEX idx_signup_requests_status ON public.signup_requests(status);
+-- Enable RLS on our tables
+ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.signup_requests ENABLE ROW LEVEL SECURITY;
+-- RLS Policies for user_profiles
+CREATE POLICY "Users can view own profile" ON public.user_profiles
+  FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can update own profile" ON public.user_profiles
+  FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Super admins can view all profiles" ON public.user_profiles
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.user_profiles 
+      WHERE id = auth.uid() AND role = 'super-admin' AND status = 'approved'
+    )
+  );
+-- RLS Policies for signup_requests
+CREATE POLICY "Super admins can view all signup requests" ON public.signup_requests
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM public.user_profiles 
+      WHERE id = auth.uid() AND role = 'super-admin' AND status = 'approved'
+    )
+  );
+CREATE POLICY "Users can view own signup request" ON public.signup_requests
+  FOR SELECT USING (user_id = auth.uid());
+-- Grant necessary permissions
+GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role;
+GRANT ALL ON public.user_profiles TO postgres, anon, authenticated, service_role;
+GRANT ALL ON public.signup_requests TO postgres, anon, authenticated, service_role;

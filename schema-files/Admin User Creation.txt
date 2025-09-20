@@ -1,0 +1,14 @@
+Admin User Creation
+
+INSERT INTO public.user_profiles (id, business_name, phone_number, role, status, first_login)
+VALUES (
+  'da7b7a23-fb2d-43fd-b4f2-d7ec895af591',
+  'System Administrator',
+  '77270180',
+  'super-admin',
+  'approved',
+  false
+);
+
+Remove Super Admin Profile Viewing Policy
+DROP POLICY IF EXISTS "Super admins can view all profiles" ON public.user_profiles;

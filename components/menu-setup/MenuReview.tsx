@@ -1,6 +1,7 @@
 // components/menu-setup/MenuReview.tsx (Updated with loading state)
 "use client";
 
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -11,6 +12,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/shadcn-button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { type CategoryTemplate } from "@/lib/data/menu-templates";
 import { uploadMenuItemImage } from "@/lib/actions/menu/actions";
 import {
@@ -36,6 +44,7 @@ interface SelectedCategory {
     price: string;
     isCustom?: boolean;
     image?: string;
+    isVegetarian?: boolean; // Add vegetarian status
   }>;
 }
 
@@ -64,10 +73,12 @@ export default function MenuReview({
     description: string;
     price: string;
     image: string;
+    isVegetarian?: boolean; // Add vegetarian status to editing state
   } | null>(null);
   const [editingItemImage, setEditingItemImage] = React.useState<File | null>(
     null
   );
+  const [isSavingEdit, setIsSavingEdit] = React.useState(false); // Add loading state for edit saves
 
   const totalItems = selectedCategories.reduce(
     (sum, cat) => sum + cat.selectedItems.length,
@@ -82,16 +93,21 @@ export default function MenuReview({
     item: SelectedCategory["selectedItems"][0],
     category: SelectedCategory
   ): string => {
-    // For custom items, use their image or default
-    if (item.isCustom) {
-      return item.image || "/default-food-img.jpg";
+    // If the item has a custom image (either custom item or updated template item), use it
+    if (item.image) {
+      return item.image;
     }
 
-    // For template items, find the image from the template
-    const templateItem = category.template.items.find(
-      (templateItem) => templateItem.name === item.name
-    );
-    return templateItem?.image || "/default-food-img.jpg";
+    // For template items without custom image, find the image from the template
+    if (!item.isCustom) {
+      const templateItem = category.template.items.find(
+        (templateItem) => templateItem.name === item.name
+      );
+      return templateItem?.image || "/default-food-img.jpg";
+    }
+
+    // Fallback to default image
+    return "/default-food-img.jpg";
   };
 
   const handleEditItem = (
@@ -107,61 +123,72 @@ export default function MenuReview({
       description: item.description,
       price: item.price,
       image: currentImage,
+      isVegetarian: item.isVegetarian, // Include vegetarian status in edit state
     });
     setEditingItemImage(null);
   };
 
   const handleSaveEdit = async () => {
     if (editingItem) {
-      // Find the category and update the item
-      const categoryToUpdate = selectedCategories.find(
-        (cat) => cat.template.id === editingItem.categoryId
-      );
+      try {
+        setIsSavingEdit(true); // Start loading
 
-      if (categoryToUpdate) {
-        let imageUrl = editingItem.image;
-
-        // If there's a new image to upload
-        if (editingItemImage) {
-          try {
-            const uploadResult = await uploadMenuItemImage(editingItemImage);
-            if (uploadResult.success && uploadResult.url) {
-              imageUrl = uploadResult.url;
-            } else {
-              console.error(
-                "Failed to upload edited item image:",
-                uploadResult.error
-              );
-              // Keep existing image on failure
-            }
-          } catch (error) {
-            console.error("Error uploading edited item image:", error);
-            // Keep existing image on error
-          }
-        }
-
-        const updatedItems = categoryToUpdate.selectedItems.map((item) =>
-          item.id === editingItem.itemId
-            ? {
-                ...item,
-                name: editingItem.name,
-                description: editingItem.description,
-                price: editingItem.price,
-                image: imageUrl,
-              }
-            : item
+        // Find the category and update the item
+        const categoryToUpdate = selectedCategories.find(
+          (cat) => cat.template.id === editingItem.categoryId
         );
 
-        const updatedCategory = {
-          ...categoryToUpdate,
-          selectedItems: updatedItems,
-        };
+        if (categoryToUpdate) {
+          let imageUrl = editingItem.image;
 
-        onUpdateCategory(editingItem.categoryId, updatedCategory);
+          // If there's a new image to upload
+          if (editingItemImage) {
+            try {
+              const uploadResult = await uploadMenuItemImage(editingItemImage);
+              if (uploadResult.success && uploadResult.url) {
+                imageUrl = uploadResult.url;
+              } else {
+                console.error(
+                  "Failed to upload edited item image:",
+                  uploadResult.error
+                );
+                // Keep existing image on failure
+              }
+            } catch (error) {
+              console.error("Error uploading edited item image:", error);
+              // Keep existing image on error
+            }
+          }
+
+          const updatedItems = categoryToUpdate.selectedItems.map((item) =>
+            item.id === editingItem.itemId
+              ? {
+                  ...item, // Preserve other existing fields
+                  name: editingItem.name,
+                  description: editingItem.description,
+                  price: editingItem.price,
+                  image: imageUrl,
+                  isVegetarian: editingItem.isVegetarian, // Update vegetarian status from edit form
+                }
+              : item
+          );
+
+          const updatedCategory = {
+            ...categoryToUpdate,
+            selectedItems: updatedItems,
+          };
+
+          onUpdateCategory(editingItem.categoryId, updatedCategory);
+        }
+      } catch (error) {
+        console.error("Error saving item edit:", error);
+        // Handle error gracefully
+      } finally {
+        setIsSavingEdit(false); // Stop loading
+        setEditingItem(null);
+        setEditingItemImage(null);
       }
     }
-    setEditingItem(null);
-    setEditingItemImage(null);
   };
 
   const handleFinishSetup = () => {
@@ -240,6 +267,28 @@ export default function MenuReview({
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
                               <h4 className="font-medium">{item.name}</h4>
+                              {item.isVegetarian !== undefined && (
+                                <div
+                                  className={`w-4 h-4 rounded-sm border-2 flex items-center justify-center bg-white flex-shrink-0 ${
+                                    item.isVegetarian
+                                      ? "border-green-600"
+                                      : "border-red-600"
+                                  }`}
+                                  title={
+                                    item.isVegetarian
+                                      ? "Vegetarian"
+                                      : "Non-Vegetarian"
+                                  }
+                                >
+                                  <div
+                                    className={`w-2 h-2 rounded-full ${
+                                      item.isVegetarian
+                                        ? "bg-green-600"
+                                        : "bg-red-600"
+                                    }`}
+                                  />
+                                </div>
+                              )}
                             </div>
                             <p className="text-sm text-muted-foreground">
                               {item.description}
@@ -370,6 +419,39 @@ export default function MenuReview({
               </div>
 
               <div>
+                <label className="text-sm font-medium">Dietary Status</label>
+                <Select
+                  value={
+                    editingItem.isVegetarian === undefined
+                      ? "none"
+                      : editingItem.isVegetarian
+                      ? "veg"
+                      : "non-veg"
+                  }
+                  onValueChange={(value) => {
+                    let vegStatus: boolean | undefined;
+                    if (value === "veg") vegStatus = true;
+                    else if (value === "non-veg") vegStatus = false;
+                    else vegStatus = undefined;
+
+                    setEditingItem({
+                      ...editingItem,
+                      isVegetarian: vegStatus,
+                    });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select dietary status" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="none">No preference</SelectItem>
+                    <SelectItem value="veg">Vegetarian</SelectItem>
+                    <SelectItem value="non-veg">Non-Vegetarian</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
                 <label className="text-sm font-medium">Image</label>
                 <div className="flex items-center gap-4 mt-2">
                   <div className="relative w-20 h-20 rounded-md border overflow-hidden">
@@ -414,13 +496,26 @@ export default function MenuReview({
               </div>
 
               <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button variant="outline" onClick={() => setEditingItem(null)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setEditingItem(null)}
+                  disabled={isSavingEdit}
+                >
                   <X className="h-4 w-4 mr-2" />
                   Cancel
                 </Button>
-                <Button onClick={handleSaveEdit}>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Changes
+                <Button onClick={handleSaveEdit} disabled={isSavingEdit}>
+                  {isSavingEdit ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Changes
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

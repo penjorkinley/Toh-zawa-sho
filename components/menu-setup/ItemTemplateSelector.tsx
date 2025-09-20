@@ -13,6 +13,13 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { type CategoryTemplate } from "@/lib/data/menu-templates";
 import {
   ArrowLeft,
@@ -22,6 +29,7 @@ import {
   ChevronUp,
   Plus,
   Upload,
+  Loader2,
 } from "lucide-react";
 import { uploadMenuItemImage } from "@/lib/actions/menu/actions";
 
@@ -34,6 +42,7 @@ interface SelectedCategory {
     price: string;
     isCustom?: boolean;
     image?: string;
+    isVegetarian?: boolean; // Add vegetarian status
   }>;
 }
 
@@ -57,14 +66,36 @@ export default function ItemTemplateSelector({
     selectedCategories.map((cat) => cat.template.id)
   );
   const [customItems, setCustomItems] = React.useState<
-    Record<string, { name: string; description: string; price: string }>
+    Record<
+      string,
+      {
+        name: string;
+        description: string;
+        price: string;
+        isVegetarian?: boolean;
+      }
+    >
   >({});
   const [customItemImages, setCustomItemImages] = React.useState<
     Record<string, File | null>
   >({});
+  const [addingCustomItem, setAddingCustomItem] = React.useState<string | null>(
+    null
+  ); // Track which category is being added
+  const [expandedCustomForms, setExpandedCustomForms] = React.useState<
+    string[]
+  >([]); // Track which custom forms are expanded
 
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
+
+  const toggleCustomForm = (categoryId: string) => {
+    setExpandedCustomForms((prev) =>
       prev.includes(categoryId)
         ? prev.filter((id) => id !== categoryId)
         : [...prev, categoryId]
@@ -132,6 +163,7 @@ export default function ItemTemplateSelector({
         price: isTemplate ? item.defaultPrice : item.price,
         isCustom: !isTemplate,
         image: imageUrl,
+        isVegetarian: item.isVegetarian, // Include vegetarian status from item
       };
       newItems = [...existingItems, newItem];
     }
@@ -163,6 +195,7 @@ export default function ItemTemplateSelector({
         description: item.description,
         price: item.defaultPrice,
         isCustom: false,
+        isVegetarian: item.isVegetarian, // Include vegetarian status from template
       }));
       const customItems = category.selectedItems.filter(
         (item) => item.isCustom
@@ -175,44 +208,63 @@ export default function ItemTemplateSelector({
     const customItem = customItems[categoryId];
     if (!customItem?.name.trim()) return;
 
-    let imageUrl = "/default-food-img.jpg";
-    const imageFile = customItemImages[categoryId];
+    try {
+      setAddingCustomItem(categoryId); // Start loading
 
-    if (imageFile) {
-      // Upload image to GitHub
-      const uploadResult = await uploadMenuItemImage(imageFile);
-      if (uploadResult.success && uploadResult.url) {
-        imageUrl = uploadResult.url;
-      } else {
-        console.error("Failed to upload image:", uploadResult.error);
+      let imageUrl = "/default-food-img.jpg";
+      const imageFile = customItemImages[categoryId];
+
+      if (imageFile) {
+        // Upload image to GitHub
+        const uploadResult = await uploadMenuItemImage(imageFile);
+        if (uploadResult.success && uploadResult.url) {
+          imageUrl = uploadResult.url;
+        } else {
+          console.error("Failed to upload image:", uploadResult.error);
+          // Still continue with default image
+        }
       }
+
+      const newItem = {
+        id: `custom-${categoryId}-${Date.now()}`,
+        name: customItem.name,
+        description: customItem.description,
+        price: customItem.price || "0",
+        isCustom: true,
+        image: imageUrl,
+        isVegetarian: customItem.isVegetarian, // Include vegetarian status for custom items
+      };
+
+      const category = selectedCategories.find(
+        (cat) => cat.template.id === categoryId
+      );
+      if (category) {
+        onItemSelection(categoryId, [...category.selectedItems, newItem]);
+      }
+
+      // Clear the custom item form and image
+      setCustomItems((prev) => ({
+        ...prev,
+        [categoryId]: {
+          name: "",
+          description: "",
+          price: "",
+          isVegetarian: undefined,
+        },
+      }));
+      setCustomItemImages((prev) => ({
+        ...prev,
+        [categoryId]: null,
+      }));
+
+      // Close the accordion after successful addition
+      setExpandedCustomForms((prev) => prev.filter((id) => id !== categoryId));
+    } catch (error) {
+      console.error("Error adding custom item:", error);
+      // Handle error gracefully - maybe show a toast notification
+    } finally {
+      setAddingCustomItem(null); // Stop loading
     }
-
-    const newItem = {
-      id: `custom-${categoryId}-${Date.now()}`,
-      name: customItem.name,
-      description: customItem.description,
-      price: customItem.price || "0",
-      isCustom: true,
-      image: imageUrl,
-    };
-
-    const category = selectedCategories.find(
-      (cat) => cat.template.id === categoryId
-    );
-    if (category) {
-      onItemSelection(categoryId, [...category.selectedItems, newItem]);
-    }
-
-    // Clear the custom item form and image
-    setCustomItems((prev) => ({
-      ...prev,
-      [categoryId]: { name: "", description: "", price: "" },
-    }));
-    setCustomItemImages((prev) => ({
-      ...prev,
-      [categoryId]: null,
-    }));
   };
 
   const handleCustomItemImageChange = (
@@ -228,7 +280,7 @@ export default function ItemTemplateSelector({
   const updateCustomItem = (
     categoryId: string,
     field: string,
-    value: string
+    value: string | boolean | undefined
   ) => {
     setCustomItems((prev) => ({
       ...prev,
@@ -378,12 +430,38 @@ export default function ItemTemplateSelector({
                                     className="mt-1"
                                   />
                                   <div className="flex-1">
-                                    <p className="font-medium text-sm">
-                                      {item.name}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground line-clamp-2">
-                                      {item.description}
-                                    </p>
+                                    <div className="flex items-start justify-between">
+                                      <div>
+                                        <p className="font-medium text-sm">
+                                          {item.name}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground line-clamp-2">
+                                          {item.description}
+                                        </p>
+                                      </div>
+                                      {item.isVegetarian !== undefined && (
+                                        <div
+                                          className={`w-4 h-4 rounded-sm border-2 flex items-center justify-center bg-white ml-2 mt-0.5 flex-shrink-0 ${
+                                            item.isVegetarian
+                                              ? "border-green-600"
+                                              : "border-red-600"
+                                          }`}
+                                          title={
+                                            item.isVegetarian
+                                              ? "Vegetarian"
+                                              : "Non-Vegetarian"
+                                          }
+                                        >
+                                          <div
+                                            className={`w-2 h-2 rounded-full ${
+                                              item.isVegetarian
+                                                ? "bg-green-600"
+                                                : "bg-red-600"
+                                            }`}
+                                          />
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
@@ -414,16 +492,40 @@ export default function ItemTemplateSelector({
                           >
                             <div className="flex items-center gap-3">
                               <Image
-                                src="/default-food-img.jpg"
+                                src={item.image || "/default-food-img.jpg"}
                                 alt={item.name}
                                 width={40}
                                 height={40}
                                 className="rounded-md object-cover flex-shrink-0"
                               />
                               <div className="flex-1">
-                                <p className="font-medium text-sm">
-                                  {item.name}
-                                </p>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium text-sm">
+                                    {item.name}
+                                  </p>
+                                  {item.isVegetarian !== undefined && (
+                                    <div
+                                      className={`w-4 h-4 rounded-sm border-2 flex items-center justify-center bg-white flex-shrink-0 ${
+                                        item.isVegetarian
+                                          ? "border-green-600"
+                                          : "border-red-600"
+                                      }`}
+                                      title={
+                                        item.isVegetarian
+                                          ? "Vegetarian"
+                                          : "Non-Vegetarian"
+                                      }
+                                    >
+                                      <div
+                                        className={`w-2 h-2 rounded-full ${
+                                          item.isVegetarian
+                                            ? "bg-green-600"
+                                            : "bg-red-600"
+                                        }`}
+                                      />
+                                    </div>
+                                  )}
+                                </div>
                                 <p className="text-xs text-muted-foreground">
                                   {item.description}
                                 </p>
@@ -440,99 +542,208 @@ export default function ItemTemplateSelector({
                           </div>
                         ))}
 
-                      {/* Add Custom Item Form */}
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                        {/* Image Upload */}
-                        <div className="relative">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) =>
-                              handleCustomItemImageChange(
-                                category.template.id,
-                                e.target.files?.[0] || null
-                              )
-                            }
-                            className="hidden"
-                            id={`custom-image-${category.template.id}`}
-                          />
-                          <label
-                            htmlFor={`custom-image-${category.template.id}`}
-                            className="block w-full h-12 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary transition-colors relative overflow-hidden"
-                          >
-                            {customItemImages[category.template.id] ? (
-                              <Image
-                                src={URL.createObjectURL(
-                                  customItemImages[category.template.id]!
-                                )}
-                                alt="Custom item"
-                                fill
-                                className="object-cover"
-                              />
-                            ) : (
-                              <div className="flex items-center justify-center h-full">
-                                <Upload className="h-4 w-4 text-gray-400" />
+                      {/* Add Custom Item Accordion */}
+                      <div className="border border-gray-200 rounded-lg">
+                        {/* Accordion Header */}
+                        <button
+                          onClick={() => toggleCustomForm(category.template.id)}
+                          className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors rounded-t-lg"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Plus className="h-4 w-4 text-blue-600" />
+                            <span className="font-medium text-sm">
+                              Add Custom Item
+                            </span>
+                          </div>
+                          {expandedCustomForms.includes(
+                            category.template.id
+                          ) ? (
+                            <ChevronUp className="h-4 w-4 text-gray-500" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4 text-gray-500" />
+                          )}
+                        </button>
+
+                        {/* Accordion Content */}
+                        {expandedCustomForms.includes(category.template.id) && (
+                          <div className="p-4 bg-blue-50/50 space-y-4 rounded-b-lg">
+                            {/* Row 1: Image Upload */}
+                            <div className="flex justify-center">
+                              <div className="relative">
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) =>
+                                    handleCustomItemImageChange(
+                                      category.template.id,
+                                      e.target.files?.[0] || null
+                                    )
+                                  }
+                                  className="hidden"
+                                  id={`custom-image-${category.template.id}`}
+                                />
+                                <label
+                                  htmlFor={`custom-image-${category.template.id}`}
+                                  className="block w-24 h-24 border-2 border-dashed border-blue-300 rounded-lg cursor-pointer hover:border-blue-500 transition-colors relative overflow-hidden bg-white"
+                                >
+                                  {customItemImages[category.template.id] ? (
+                                    <Image
+                                      src={URL.createObjectURL(
+                                        customItemImages[category.template.id]!
+                                      )}
+                                      alt="Custom item"
+                                      fill
+                                      className="object-cover"
+                                    />
+                                  ) : (
+                                    <div className="flex flex-col items-center justify-center h-full text-blue-400">
+                                      <Upload className="h-6 w-6 mb-1" />
+                                      <span className="text-xs">Upload</span>
+                                    </div>
+                                  )}
+                                </label>
                               </div>
-                            )}
-                          </label>
-                        </div>
+                            </div>
 
-                        {/* Name Input */}
-                        <Input
-                          placeholder="Item name"
-                          value={customItems[category.template.id]?.name || ""}
-                          onChange={(e) =>
-                            updateCustomItem(
-                              category.template.id,
-                              "name",
-                              e.target.value
-                            )
-                          }
-                        />
+                            {/* Row 2: Name and Description */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Item Name
+                                </label>
+                                <Input
+                                  placeholder="Enter item name"
+                                  value={
+                                    customItems[category.template.id]?.name ||
+                                    ""
+                                  }
+                                  onChange={(e) =>
+                                    updateCustomItem(
+                                      category.template.id,
+                                      "name",
+                                      e.target.value
+                                    )
+                                  }
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Description
+                                </label>
+                                <Input
+                                  placeholder="Enter description"
+                                  value={
+                                    customItems[category.template.id]
+                                      ?.description || ""
+                                  }
+                                  onChange={(e) =>
+                                    updateCustomItem(
+                                      category.template.id,
+                                      "description",
+                                      e.target.value
+                                    )
+                                  }
+                                />
+                              </div>
+                            </div>
 
-                        {/* Description Input */}
-                        <Input
-                          placeholder="Description"
-                          value={
-                            customItems[category.template.id]?.description || ""
-                          }
-                          onChange={(e) =>
-                            updateCustomItem(
-                              category.template.id,
-                              "description",
-                              e.target.value
-                            )
-                          }
-                        />
+                            {/* Row 3: Dietary Status and Price */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Dietary Status
+                                </label>
+                                <Select
+                                  value={
+                                    customItems[category.template.id]
+                                      ?.isVegetarian === undefined
+                                      ? "none"
+                                      : customItems[category.template.id]
+                                          ?.isVegetarian
+                                      ? "veg"
+                                      : "non-veg"
+                                  }
+                                  onValueChange={(value) => {
+                                    let vegStatus: boolean | undefined;
+                                    if (value === "veg") vegStatus = true;
+                                    else if (value === "non-veg")
+                                      vegStatus = false;
+                                    else vegStatus = undefined;
 
-                        {/* Price and Add Button */}
-                        <div className="flex gap-2">
-                          <Input
-                            placeholder="Price"
-                            type="number"
-                            value={
-                              customItems[category.template.id]?.price || ""
-                            }
-                            onChange={(e) =>
-                              updateCustomItem(
-                                category.template.id,
-                                "price",
-                                e.target.value
-                              )
-                            }
-                          />
-                          <Button
-                            size="sm"
-                            onClick={() =>
-                              handleAddCustomItem(category.template.id)
-                            }
-                            disabled={
-                              !customItems[category.template.id]?.name?.trim()
-                            }
-                          >
-                            Add
-                          </Button>
-                        </div>
+                                    updateCustomItem(
+                                      category.template.id,
+                                      "isVegetarian",
+                                      vegStatus
+                                    );
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select dietary status" />
+                                  </SelectTrigger>
+                                  <SelectContent className="bg-white">
+                                    <SelectItem value="none">
+                                      No preference
+                                    </SelectItem>
+                                    <SelectItem value="veg">
+                                      Vegetarian
+                                    </SelectItem>
+                                    <SelectItem value="non-veg">
+                                      Non-Vegetarian
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Price (Nu.)
+                                </label>
+                                <Input
+                                  placeholder="Enter price"
+                                  type="number"
+                                  value={
+                                    customItems[category.template.id]?.price ||
+                                    ""
+                                  }
+                                  onChange={(e) =>
+                                    updateCustomItem(
+                                      category.template.id,
+                                      "price",
+                                      e.target.value
+                                    )
+                                  }
+                                />
+                              </div>
+                            </div>
+
+                            {/* Row 4: Add Button */}
+                            <div className="flex justify-center pt-2">
+                              <Button
+                                onClick={() =>
+                                  handleAddCustomItem(category.template.id)
+                                }
+                                disabled={
+                                  !customItems[
+                                    category.template.id
+                                  ]?.name?.trim() ||
+                                  addingCustomItem === category.template.id
+                                }
+                                className="px-6"
+                              >
+                                {addingCustomItem === category.template.id ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Adding...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Add Custom Item
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </CardContent>

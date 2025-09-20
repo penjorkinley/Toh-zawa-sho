@@ -1,19 +1,17 @@
 import {
+  Apple,
+  Beef,
   ChefHat,
   Coffee,
-  Utensils,
-  Wine,
   Cookie,
-  Soup,
-  Salad,
-  Pizza,
-  Sandwich,
-  IceCream,
   Fish,
-  Beef,
-  Grape,
+  Pizza,
+  Salad,
+  Sandwich,
+  Soup,
+  Utensils,
   Wheat,
-  Apple,
+  Wine,
 } from "lucide-react";
 
 export interface MenuItemTemplate {
@@ -21,6 +19,7 @@ export interface MenuItemTemplate {
   description: string;
   defaultPrice: string;
   image?: string;
+  isVegetarian?: boolean; // Optional field to avoid breaking existing templates
 }
 
 export interface CategoryTemplate {
@@ -43,60 +42,70 @@ export const CATEGORY_TEMPLATES: CategoryTemplate[] = [
         description: "Crispy golden potato fries",
         defaultPrice: "120",
         image: "/default-food-img.jpg",
+        isVegetarian: true,
       },
       {
         name: "Chicken Wings",
         description: "Spicy buffalo wings with dip",
         defaultPrice: "280",
         image: "/default-food-img.jpg",
+        isVegetarian: false,
       },
       {
         name: "Spring Rolls",
         description: "Crispy vegetable spring rolls",
         defaultPrice: "180",
         image: "/default-food-img.jpg",
+        isVegetarian: true,
       },
       {
         name: "Momo (Steamed)",
         description: "Traditional steamed dumplings",
         defaultPrice: "150",
         image: "/default-food-img.jpg",
+        // Note: Momo can be veg or non-veg, leaving undefined for user choice
       },
       {
         name: "Crispy Chili Potatoes",
         description: "Spicy Indo-Chinese potato appetizer",
         defaultPrice: "160",
         image: "/default-food-img.jpg",
+        isVegetarian: true,
       },
       {
         name: "Cheese Balls",
         description: "Deep fried cheese balls with herbs",
         defaultPrice: "200",
         image: "/default-food-img.jpg",
+        isVegetarian: true,
       },
       {
         name: "Chicken Satay",
         description: "Grilled chicken skewers with peanut sauce",
         defaultPrice: "220",
         image: "/default-food-img.jpg",
+        isVegetarian: false,
       },
       {
         name: "Garlic Bread",
         description: "Toasted bread with garlic butter",
         defaultPrice: "140",
         image: "/default-food-img.jpg",
+        isVegetarian: true,
       },
       {
         name: "Nachos",
         description: "Tortilla chips with cheese and jalapeños",
         defaultPrice: "190",
         image: "/default-food-img.jpg",
+        isVegetarian: true,
       },
       {
         name: "Onion Rings",
         description: "Crispy battered onion rings",
         defaultPrice: "130",
         image: "/default-food-img.jpg",
+        isVegetarian: true,
       },
     ],
   },
@@ -111,42 +120,49 @@ export const CATEGORY_TEMPLATES: CategoryTemplate[] = [
         description: "Traditional chili with cheese curry",
         defaultPrice: "180",
         image: "/default-food-img.jpg",
+        isVegetarian: true,
       },
       {
         name: "Phaksha Paa",
         description: "Pork with radish and chili",
         defaultPrice: "220",
         image: "/default-food-img.jpg",
+        isVegetarian: false,
       },
       {
         name: "Jasha Maru",
         description: "Spicy chicken curry with vegetables",
         defaultPrice: "200",
         image: "/default-food-img.jpg",
+        isVegetarian: false,
       },
       {
         name: "Shakam Paa",
         description: "Dried beef with chilies and radish",
         defaultPrice: "250",
         image: "/default-food-img.jpg",
+        isVegetarian: false,
       },
       {
         name: "Kewa Datshi",
         description: "Potato curry with cheese",
         defaultPrice: "160",
         image: "/default-food-img.jpg",
+        isVegetarian: true,
       },
       {
         name: "Red Rice",
         description: "Traditional Bhutanese red rice",
         defaultPrice: "80",
         image: "/default-food-img.jpg",
+        isVegetarian: true,
       },
       {
         name: "Sikam Paa",
         description: "Dried pork with chili and radish",
         defaultPrice: "240",
         image: "/default-food-img.jpg",
+        isVegetarian: false,
       },
       {
         name: "Shamu Datshi",

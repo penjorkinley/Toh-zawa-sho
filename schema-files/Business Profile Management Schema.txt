@@ -1,0 +1,90 @@
+Business Profile Management Schema
+-- Create business_information table
+CREATE TABLE public.business_information (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  business_type TEXT NOT NULL,
+  location TEXT NOT NULL,
+  logo_url TEXT,
+  cover_photo_url TEXT,
+  description TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  CONSTRAINT fk_user_profiles
+    FOREIGN KEY (user_id)
+    REFERENCES public.user_profiles(id)
+    ON DELETE CASCADE
+);
+-- Create business_hours table
+CREATE TABLE public.business_hours (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  business_id UUID NOT NULL REFERENCES public.business_information(id) ON DELETE CASCADE,
+  day_of_week TEXT NOT NULL CHECK (day_of_week IN ('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday')),
+  opening_time TIME NOT NULL,
+  closing_time TIME NOT NULL,
+  is_closed BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+-- Add triggers for updated_at
+CREATE TRIGGER handle_business_information_updated_at
+  BEFORE UPDATE ON public.business_information
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_updated_at();
+CREATE TRIGGER handle_business_hours_updated_at
+  BEFORE UPDATE ON public.business_hours
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_updated_at();
+-- Create indexes for faster queries
+CREATE INDEX idx_business_information_user_id ON public.business_information(user_id);
+CREATE INDEX idx_business_hours_business_id ON public.business_hours(business_id);
+CREATE INDEX idx_business_hours_day_of_week ON public.business_hours(day_of_week);
+-- Enable RLS on tables
+ALTER TABLE public.business_information ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.business_hours ENABLE ROW LEVEL SECURITY;
+-- RLS Policies for business_information
+CREATE POLICY "Users can view own business information" ON public.business_information
+  FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can update own business information" ON public.business_information
+  FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own business information" ON public.business_information
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Super admins can view all business information" ON public.business_information
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.user_profiles 
+      WHERE id = auth.uid() AND role = 'super-admin' AND status = 'approved'
+    )
+  );
+-- RLS Policies for business_hours
+CREATE POLICY "Users can view own business hours" ON public.business_hours
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.business_information
+      WHERE id = business_hours.business_id AND user_id = auth.uid()
+    )
+  );
+CREATE POLICY "Users can update own business hours" ON public.business_hours
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM public.business_information
+      WHERE id = business_hours.business_id AND user_id = auth.uid()
+    )
+  );
+CREATE POLICY "Users can insert own business hours" ON public.business_hours
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.business_information
+      WHERE id = business_hours.business_id AND user_id = auth.uid()
+    )
+  );
+CREATE POLICY "Super admins can view all business hours" ON public.business_hours
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.user_profiles 
+      WHERE id = auth.uid() AND role = 'super-admin' AND status = 'approved'
+    )
+  );
+-- Grant necessary permissions
+GRANT ALL ON public.business_information TO postgres, anon, authenticated, service_role;
+GRANT ALL ON public.business_hours TO postgres, anon, authenticated, service_role;
