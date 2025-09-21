@@ -83,19 +83,22 @@ export default function MenuItemCard({ item, onClick }: MenuItemCardProps) {
 
           {/* Veg/Non-veg Indicator */}
           <div className="absolute top-2 left-2 z-10">
-            <div
-              className={`w-4 h-4 rounded-sm border-2 flex items-center justify-center ${
-                item.isVeg
-                  ? "border-green-600 bg-white"
-                  : "border-red-600 bg-white"
-              }`}
-            >
+            {/* Only show vegetarian indicator if preference is specified (not null) */}
+            {item.isVeg !== null && (
               <div
-                className={`w-2 h-2 rounded-full ${
-                  item.isVeg ? "bg-green-600" : "bg-red-600"
+                className={`w-4 h-4 rounded-sm border-2 flex items-center justify-center ${
+                  item.isVeg
+                    ? "border-green-600 bg-white"
+                    : "border-red-600 bg-white"
                 }`}
-              />
-            </div>
+              >
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    item.isVeg ? "bg-green-600" : "bg-red-600"
+                  }`}
+                />
+              </div>
+            )}
           </div>
         </div>
 

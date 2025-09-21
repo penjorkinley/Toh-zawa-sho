@@ -87,22 +87,24 @@ export default function MenuItemModal({
             }}
           />
 
-          {/* Veg/Non-veg Indicator */}
-          <div className="absolute bottom-3 left-3">
-            <div
-              className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                item.isVeg
-                  ? "border-green-600 bg-white"
-                  : "border-red-600 bg-white"
-              }`}
-            >
+          {/* Veg/Non-veg Indicator - Only show if preference is specified (not null) */}
+          {item.isVeg !== null && (
+            <div className="absolute bottom-3 left-3">
               <div
-                className={`w-2.5 h-2.5 rounded ${
-                  item.isVeg ? "bg-green-600" : "bg-red-600"
+                className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                  item.isVeg
+                    ? "border-green-600 bg-white"
+                    : "border-red-600 bg-white"
                 }`}
-              />
+              >
+                <div
+                  className={`w-2.5 h-2.5 rounded ${
+                    item.isVeg ? "bg-green-600" : "bg-red-600"
+                  }`}
+                />
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Scrollable Content Container */}

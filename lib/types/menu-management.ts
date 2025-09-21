@@ -19,7 +19,7 @@ export interface MenuItem {
   description?: string;
   image_url?: string;
   is_available: boolean;
-  is_vegetarian: boolean;
+  is_vegetarian: boolean | null; // null = no preference, true = vegetarian, false = non-vegetarian
   display_order: number;
   template_item_id?: string;
   is_custom: boolean;
@@ -74,7 +74,7 @@ export interface CreateMenuItemDTO {
   name: string;
   description?: string;
   image_url?: string;
-  is_vegetarian?: boolean;
+  is_vegetarian?: boolean | null; // null = no preference, true = vegetarian, false = non-vegetarian
   display_order?: number;
   template_item_id?: string;
   is_custom?: boolean;
@@ -91,7 +91,7 @@ export interface UpdateMenuItemDTO {
   description?: string;
   image_url?: string;
   is_available?: boolean;
-  is_vegetarian?: boolean;
+  is_vegetarian?: boolean | null; // null = no preference, true = vegetarian, false = non-vegetarian
   display_order?: number;
   has_multiple_sizes?: boolean;
   sizes?: Array<{
@@ -117,7 +117,7 @@ export interface MenuSetupData {
       description: string;
       price: string;
       image_url?: string;
-      is_vegetarian?: boolean;
+      is_vegetarian?: boolean | null; // null = no preference, true = vegetarian, false = non-vegetarian
       template_item_id?: string;
       is_custom?: boolean;
     }>;

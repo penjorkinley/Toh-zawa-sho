@@ -24,7 +24,7 @@ CREATE TABLE public.menu_items (
   description TEXT,
   image_url TEXT,
   is_available BOOLEAN DEFAULT true,
-  is_vegetarian BOOLEAN DEFAULT false,
+  is_vegetarian BOOLEAN, -- NULL = no preference, true = vegetarian, false = non-vegetarian
   has_multiple_sizes BOOLEAN DEFAULT false,
   display_order INTEGER NOT NULL DEFAULT 0,
   template_item_id TEXT, -- Reference to original template item for tracking

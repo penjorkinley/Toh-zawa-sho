@@ -325,7 +325,7 @@ export async function createMenuItem(data: CreateMenuItemDTO): Promise<{
         name: data.name,
         description: data.description,
         image_url: data.image_url || "/default-food-img.jpg", // Use provided image or default
-        is_vegetarian: data.is_vegetarian || false,
+        is_vegetarian: data.is_vegetarian !== undefined ? data.is_vegetarian : null, // Handle null for "no preference"
         display_order: data.display_order || 0,
         template_item_id: data.template_item_id,
         is_custom: data.is_custom || false,
@@ -530,7 +530,7 @@ export async function completeMenuSetup(setupData: MenuSetupData): Promise<{
                 name: itemData.name,
                 description: itemData.description,
                 image_url: itemData.image_url,
-                is_vegetarian: itemData.is_vegetarian || false,
+                is_vegetarian: itemData.is_vegetarian !== undefined ? itemData.is_vegetarian : null, // Handle null for "no preference"
                 display_order: itemIndex,
                 template_item_id: itemData.template_item_id,
                 is_custom: itemData.is_custom || false,
