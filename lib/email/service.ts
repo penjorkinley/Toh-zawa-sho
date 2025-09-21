@@ -323,3 +323,117 @@ export const sendRejectionEmail = async (
     text,
   });
 };
+
+// Password reset OTP email
+export const sendPasswordResetOtpEmail = async (
+  email: string,
+  otpCode: string,
+  expiresInMinutes: number = 5
+): Promise<{ success: boolean; error?: string }> => {
+  const subject = `🔐 Password Reset Code - ${
+    process.env.APP_NAME || "Restaurant Platform"
+  }`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Password Reset Code</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc;">
+      <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">🔐 Password Reset</h1>
+          <p style="color: #dbeafe; margin: 10px 0 0 0; font-size: 16px;">Secure verification code</p>
+        </div>
+        
+        <!-- Content -->
+        <div style="background: white; padding: 40px 30px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+          <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 22px;">Password Reset Request</h2>
+          
+          <p style="color: #374151; line-height: 1.6; margin: 0 0 20px 0; font-size: 16px;">
+            We received a request to reset your password. Please use the verification code below to proceed with resetting your password.
+          </p>
+
+          <div style="background: #f8fafc; border: 2px solid #3b82f6; border-radius: 12px; padding: 30px; margin: 30px 0; text-align: center;">
+            <p style="color: #6b7280; margin: 0 0 10px 0; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Your Verification Code</p>
+            <div style="font-size: 36px; font-weight: bold; color: #3b82f6; letter-spacing: 8px; font-family: 'Courier New', monospace; margin: 10px 0; text-align: center;">
+              ${otpCode}
+            </div>
+            <p style="color: #6b7280; margin: 10px 0 0 0; font-size: 14px;">
+              Valid for ${expiresInMinutes} minutes only
+            </p>
+          </div>
+
+          <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+            <h3 style="color: #ea580c; margin: 0 0 15px 0; font-size: 16px;">⚠️ Important Security Information:</h3>
+            <ul style="color: #c2410c; margin: 0; padding-left: 20px; line-height: 1.6; font-size: 14px;">
+              <li style="margin-bottom: 8px;">This code expires in ${expiresInMinutes} minutes</li>
+              <li style="margin-bottom: 8px;">Only use this code if you requested a password reset</li>
+              <li style="margin-bottom: 8px;">Never share this code with anyone</li>
+              <li>If you didn't request this, please ignore this email</li>
+            </ul>
+          </div>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${
+              process.env.NEXT_PUBLIC_APP_URL
+            }/verify-otp?contact=${encodeURIComponent(email)}" 
+               style="background: #3b82f6; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block;">
+              Verify Code & Reset Password
+            </a>
+          </div>
+          
+          <p style="color: #6b7280; font-size: 14px; margin: 20px 0 0 0;">
+            If you have any questions or need assistance, please contact our support team at 
+            <a href="mailto:${
+              process.env.SUPPORT_EMAIL
+            }" style="color: #3b82f6;">${process.env.SUPPORT_EMAIL}</a>
+          </p>
+        </div>
+        
+        <!-- Footer -->
+        <div style="text-align: center; padding: 20px; color: #6b7280; font-size: 12px;">
+          <p style="margin: 0;">© ${getCurrentYear()} ${
+    process.env.APP_NAME || "Restaurant Platform"
+  }. All rights reserved.</p>
+          <p style="margin: 5px 0 0 0;">This email was sent because a password reset was requested for your account.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const text = `
+    Password Reset Code - ${process.env.APP_NAME || "Restaurant Platform"}
+    
+    We received a request to reset your password.
+    
+    Your verification code is: ${otpCode}
+    
+    This code is valid for ${expiresInMinutes} minutes only.
+    
+    IMPORTANT SECURITY INFORMATION:
+    - Only use this code if you requested a password reset
+    - Never share this code with anyone
+    - If you didn't request this, please ignore this email
+    
+    Complete your password reset at: ${
+      process.env.NEXT_PUBLIC_APP_URL
+    }/verify-otp?contact=${encodeURIComponent(email)}
+    
+    Support: ${process.env.SUPPORT_EMAIL}
+    
+    © ${getCurrentYear()} ${process.env.APP_NAME || "Restaurant Platform"}
+  `;
+
+  return sendEmail({
+    to: email,
+    subject,
+    html,
+    text,
+  });
+};

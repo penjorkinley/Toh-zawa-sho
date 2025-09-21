@@ -2,7 +2,7 @@ import * as z from "zod";
 
 export const resetPasswordSchema = z
   .object({
-    password: z
+    newPassword: z
       .string()
       .min(8, "Password must be at least 8 characters")
       .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
@@ -13,9 +13,8 @@ export const resetPasswordSchema = z
         "Password must contain at least one special character"
       ),
     confirmPassword: z.string(),
-    contact: z.string(),
   })
-  .refine((data) => data.password === data.confirmPassword, {
+  .refine((data) => data.newPassword === data.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
   });

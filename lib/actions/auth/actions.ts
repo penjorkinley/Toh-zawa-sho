@@ -177,7 +177,11 @@ export async function completeFirstLoginAction(userId: string) {
 }
 
 export async function forgotPasswordAction(
-  prevState: { success?: boolean; errors?: Record<string, string[]> },
+  prevState: {
+    success?: boolean;
+    errors?: Record<string, string[]>;
+    error?: string;
+  },
   formData: FormData
 ) {
   const email = formData.get("email") as string;
@@ -189,15 +193,51 @@ export async function forgotPasswordAction(
     return { success: false, errors: fieldErrors };
   }
 
-  const redirectUrl = `/verify-otp?contact=${encodeURIComponent(email)}`;
-  return { success: true, redirect: redirectUrl };
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/forgot-password`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      }
+    );
+
+    const result = await response.json();
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error || "Failed to send verification code",
+      };
+    }
+
+    const redirectUrl = `/verify-otp?contact=${encodeURIComponent(email)}`;
+    return {
+      success: true,
+      redirect: redirectUrl,
+      message: result.message,
+    };
+  } catch (error) {
+    console.error("Forgot password action error:", error);
+    return {
+      success: false,
+      error: "An unexpected error occurred. Please try again.",
+    };
+  }
 }
 
 export async function verifyOtpAction(
-  prevState: { success?: boolean; errors?: Record<string, string[]> },
+  prevState: {
+    success?: boolean;
+    errors?: Record<string, string[]>;
+    error?: string;
+  },
   formData: FormData
 ) {
-  const otp = formData.get("otp");
+  const otp = formData.get("otp") as string;
   const contact = formData.get("contact") as string;
 
   const validationResult = verifyOtpSchema.safeParse({ otp });
@@ -207,18 +247,55 @@ export async function verifyOtpAction(
     return { success: false, errors: fieldErrors };
   }
 
-  return {
-    success: true,
-    redirect: `/reset-password?contact=${encodeURIComponent(contact)}`,
-  };
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/verify-reset-otp`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: contact, otp }),
+      }
+    );
+
+    const result = await response.json();
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error || "Invalid or expired OTP code",
+        attemptsRemaining: result.attemptsRemaining,
+      };
+    }
+
+    return {
+      success: true,
+      redirect: `/reset-password?token=${encodeURIComponent(
+        result.resetToken
+      )}`,
+      message: result.message,
+    };
+  } catch (error) {
+    console.error("Verify OTP action error:", error);
+    return {
+      success: false,
+      error: "An unexpected error occurred. Please try again.",
+    };
+  }
 }
 
 export async function resetPasswordAction(
-  prevState: { success?: boolean; errors?: Record<string, string[]> },
+  prevState: {
+    success?: boolean;
+    errors?: Record<string, string[]>;
+    error?: string;
+  },
   formData: FormData
 ) {
-  const newPassword = formData.get("newPassword");
-  const confirmPassword = formData.get("confirmPassword");
+  const newPassword = formData.get("newPassword") as string;
+  const confirmPassword = formData.get("confirmPassword") as string;
+  const resetToken = formData.get("resetToken") as string;
 
   const validationResult = resetPasswordSchema.safeParse({
     newPassword,
@@ -230,8 +307,50 @@ export async function resetPasswordAction(
     return { success: false, errors: fieldErrors };
   }
 
-  return {
-    success: true,
-    redirect: "/login",
-  };
+  if (!resetToken) {
+    return {
+      success: false,
+      error:
+        "Invalid reset session. Please start the password reset process again.",
+    };
+  }
+
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/reset-password`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          resetToken,
+          newPassword,
+          confirmPassword,
+        }),
+      }
+    );
+
+    const result = await response.json();
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error || "Failed to reset password",
+        errors: result.errors,
+      };
+    }
+
+    return {
+      success: true,
+      redirect: "/login",
+      message: result.message,
+    };
+  } catch (error) {
+    console.error("Reset password action error:", error);
+    return {
+      success: false,
+      error: "An unexpected error occurred. Please try again.",
+    };
+  }
 }
