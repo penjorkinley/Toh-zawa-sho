@@ -38,7 +38,7 @@ const BackButton: React.FC<BackButtonProps> = ({ onClick, title }) => {
           />
         </svg>
       </button>
-      <span className="flex-1 text-base sm:text-lg font-medium text-center">
+      <span className="flex-1 text-lg sm:text-xl font-bold text-center text-primary">
         {title}
       </span>
     </div>

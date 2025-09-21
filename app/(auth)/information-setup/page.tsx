@@ -342,9 +342,11 @@ export default function InformationSetupPage() {
   }
 
   return (
-    <div className="bg-white">
-      <BackButton title="Complete Setup" />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="bg-white pt-6 sm:pt-8">
+      <div className="px-4 sm:px-6 lg:px-8">
+        <BackButton title="Complete Setup" />
+      </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="max-w-3xl mx-auto">
           <h1 className="text-3xl font-bold text-gray-900 mb-6">
             Business Information Setup
