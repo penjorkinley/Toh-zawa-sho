@@ -150,11 +150,9 @@ export default function PendingRegistrationsPage() {
         // Show success toast with email status
         toast.dismiss(loadingToast);
         if (result.emailSent) {
-          toast.success("✅ Registration approved and welcome email sent!");
+          toast.success("Registration approved and welcome email sent!");
         } else {
-          toast.success(
-            "✅ Registration approved! (Email notification failed)"
-          );
+          toast.success("Registration approved! (Email notification failed)");
         }
       }
     } catch (err) {

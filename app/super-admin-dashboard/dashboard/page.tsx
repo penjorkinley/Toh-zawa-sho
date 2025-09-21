@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/shadcn-button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Loader2,
   Store,
@@ -14,6 +15,7 @@ import {
   TrendingUp,
   Users,
   RefreshCw,
+  ChevronRight,
 } from "lucide-react";
 
 // Interface for dashboard data
@@ -23,12 +25,13 @@ interface DashboardData {
   statsData: {
     totalRestaurants: number;
     pendingRegistrations: number;
-    activeRestaurants: number;
+    menusCompleted: number;
     newRegistrationsThisWeek: number;
   };
 }
 
 export default function SuperAdminDashboardPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dashboardData, setDashboardData] = useState<DashboardData>({
@@ -37,7 +40,7 @@ export default function SuperAdminDashboardPage() {
     statsData: {
       totalRestaurants: 0,
       pendingRegistrations: 0,
-      activeRestaurants: 0,
+      menusCompleted: 0,
       newRegistrationsThisWeek: 0,
     },
   });
@@ -55,35 +58,62 @@ export default function SuperAdminDashboardPage() {
     setApiTimeout(false);
 
     try {
-      const response = await fetch("/api/admin/signup-requests", {
-        headers: {
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-        },
-      });
+      // Fetch both signup requests and dashboard stats in parallel
+      const [signupResponse, statsResponse] = await Promise.all([
+        fetch("/api/admin/signup-requests", {
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+          },
+        }),
+        fetch("/api/admin/dashboard-stats", {
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+          },
+        }),
+      ]);
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      if (!signupResponse.ok) {
+        throw new Error(
+          `Signup requests HTTP ${signupResponse.status}: ${signupResponse.statusText}`
+        );
       }
 
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.error || "API request failed");
+      if (!statsResponse.ok) {
+        throw new Error(
+          `Dashboard stats HTTP ${statsResponse.status}: ${statsResponse.statusText}`
+        );
       }
 
-      const pendingRegistrations = Array.isArray(result.data)
-        ? result.data
+      const signupResult = await signupResponse.json();
+      const statsResult = await statsResponse.json();
+
+      if (!signupResult.success) {
+        throw new Error(
+          signupResult.error || "Signup requests API request failed"
+        );
+      }
+
+      if (!statsResult.success) {
+        throw new Error(
+          statsResult.error || "Dashboard stats API request failed"
+        );
+      }
+
+      const pendingRegistrations = Array.isArray(signupResult.data)
+        ? signupResult.data
         : [];
+
+      const statsData = statsResult.data || {
+        totalRestaurants: 0,
+        pendingRegistrations: 0,
+        activeRestaurants: 0,
+        newRegistrationsThisWeek: 0,
+      };
 
       setDashboardData({
         pendingRegistrations,
         approvedRestaurants: [],
-        statsData: {
-          totalRestaurants: pendingRegistrations.length,
-          pendingRegistrations: pendingRegistrations.length,
-          activeRestaurants: 0,
-          newRegistrationsThisWeek: 0,
-        },
+        statsData,
       });
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
@@ -96,7 +126,7 @@ export default function SuperAdminDashboardPage() {
         statsData: {
           totalRestaurants: 0,
           pendingRegistrations: 0,
-          activeRestaurants: 0,
+          menusCompleted: 0,
           newRegistrationsThisWeek: 0,
         },
       });
@@ -107,6 +137,10 @@ export default function SuperAdminDashboardPage() {
 
   const handleRetry = () => {
     fetchDashboardData();
+  };
+
+  const handleRegistrationClick = () => {
+    router.push("/super-admin-dashboard/pending-registrations");
   };
 
   if (loading) {
@@ -171,7 +205,7 @@ export default function SuperAdminDashboardPage() {
               {dashboardData.statsData.totalRestaurants}
             </div>
             <p className="text-xs text-muted-foreground">
-              Registered businesses
+              Active & setup complete
             </p>
           </CardContent>
         </Card>
@@ -194,15 +228,15 @@ export default function SuperAdminDashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Active Restaurants
+              Menus Completed
             </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {dashboardData.statsData.activeRestaurants}
+              {dashboardData.statsData.menusCompleted}
             </div>
-            <p className="text-xs text-muted-foreground">Currently active</p>
+            <p className="text-xs text-muted-foreground">Full menu setup</p>
           </CardContent>
         </Card>
 
@@ -257,7 +291,8 @@ export default function SuperAdminDashboardPage() {
                 .map((registration) => (
                   <div
                     key={registration.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer"
+                    onClick={handleRegistrationClick}
                   >
                     <div className="flex items-center space-x-4">
                       <Avatar>
@@ -284,6 +319,7 @@ export default function SuperAdminDashboardPage() {
                       <p className="text-xs text-gray-400">
                         {new Date(registration.created_at).toLocaleDateString()}
                       </p>
+                      <ChevronRight className="h-4 w-4 text-gray-400" />
                     </div>
                   </div>
                 ))}
