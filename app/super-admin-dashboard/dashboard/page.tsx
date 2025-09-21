@@ -9,7 +9,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Loader2,
   Store,
   ClipboardCheck,
   TrendingUp,
@@ -17,6 +16,8 @@ import {
   RefreshCw,
   ChevronRight,
 } from "lucide-react";
+import { SuperAdminDashboardLoading } from "@/components/ui/dashboard-loading";
+import { SuperAdminDashboardError } from "@/components/ui/dashboard-error";
 
 // Interface for dashboard data
 interface DashboardData {
@@ -144,21 +145,7 @@ export default function SuperAdminDashboardPage() {
   };
 
   if (loading) {
-    return (
-      <div className="p-6 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Super Admin system overview and management
-          </p>
-        </div>
-
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <span className="ml-2">Loading dashboard data...</span>
-        </div>
-      </div>
-    );
+    return <SuperAdminDashboardLoading />;
   }
 
   return (
@@ -173,22 +160,7 @@ export default function SuperAdminDashboardPage() {
 
       {/* Error Alert */}
       {error && (
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-red-800">
-              <span className="font-medium">Error:</span>
-              <span>{error}</span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRetry}
-                className="ml-auto"
-              >
-                Retry
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <SuperAdminDashboardError message={error} onRetry={handleRetry} />
       )}
 
       {/* Stats Cards */}

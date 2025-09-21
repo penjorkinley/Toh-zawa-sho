@@ -8,23 +8,27 @@ import { RestaurantTable } from "@/lib/types/table-management";
 import { getTables } from "@/lib/actions/table/actions";
 import toast from "react-hot-toast";
 import { Loader2, Plus } from "lucide-react";
+import { TablesLoading } from "@/components/ui/dashboard-loading";
+import { TablesError } from "@/components/ui/dashboard-error";
 
 export default function TablesPage() {
   const [tables, setTables] = useState<RestaurantTable[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showNewTable, setShowNewTable] = useState(false);
 
   const fetchTables = useCallback(async () => {
     try {
+      setError(null);
       const result = await getTables();
       if (result.success && result.tables) {
         setTables(result.tables);
       } else {
-        toast.error(result.error || "Failed to fetch tables");
+        setError(result.error || "Failed to fetch tables");
       }
     } catch (error) {
       console.error("Error fetching tables:", error);
-      toast.error("Failed to fetch tables");
+      setError("Failed to fetch tables");
     } finally {
       setIsLoading(false);
     }
@@ -48,14 +52,11 @@ export default function TablesPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="p-4 flex items-center justify-center min-h-[200px]">
-        <div className="flex items-center gap-2">
-          <Loader2 className="h-6 w-6 animate-spin" />
-          <span>Loading tables...</span>
-        </div>
-      </div>
-    );
+    return <TablesLoading />;
+  }
+
+  if (error) {
+    return <TablesError message={error} onRetry={fetchTables} />;
   }
 
   return (

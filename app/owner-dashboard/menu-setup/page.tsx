@@ -22,6 +22,8 @@ import {
 } from "@/lib/actions/menu/actions";
 import { MenuSetupData } from "@/lib/types/menu-management";
 import { useRouter } from "next/navigation";
+import { MenuSetupLoading } from "@/components/ui/dashboard-loading";
+import { MenuSetupError } from "@/components/ui/dashboard-error";
 
 // Consistent interface definition matching all components
 interface SelectedCategory {
@@ -47,6 +49,7 @@ export default function MenuSetupPage() {
   >([]);
   const [isQuickSetup, setIsQuickSetup] = React.useState(true);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
   const [isSaving, setIsSaving] = React.useState(false);
   const [isMenuAlreadySetup, setIsMenuAlreadySetup] = React.useState(false);
 
@@ -71,7 +74,7 @@ export default function MenuSetupPage() {
         description?: string;
         image_url?: string;
         is_available: boolean;
-        is_vegetarian: boolean;
+        is_vegetarian: boolean | null; // Fix: Allow null to match database type
         has_multiple_sizes: boolean;
         sizes?: Array<{
           id: string;
@@ -122,6 +125,7 @@ export default function MenuSetupPage() {
         }
       } catch (error) {
         console.error("❌ Error checking menu setup status:", error);
+        setError("Failed to load menu setup status. Please try again.");
       } finally {
         setIsLoading(false);
       }
@@ -415,13 +419,23 @@ export default function MenuSetupPage() {
 
   // Loading state
   if (isLoading) {
+    return <MenuSetupLoading />;
+  }
+
+  // Error state
+  if (error) {
     return (
-      <div className="p-6 flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
-          <p className="text-muted-foreground">Checking menu setup status...</p>
-        </div>
-      </div>
+      <MenuSetupError
+        message={error}
+        onRetry={() => {
+          setError(null);
+          setIsLoading(true);
+          // Re-run the setup check logic
+          React.startTransition(() => {
+            window.location.reload();
+          });
+        }}
+      />
     );
   }
 

@@ -22,7 +22,6 @@ import {
   MapPin,
   Calendar,
   Filter,
-  Loader2,
   RefreshCw,
   Utensils,
   Coffee,
@@ -30,6 +29,8 @@ import {
   Wine,
   Ban,
 } from "lucide-react";
+import { RestaurantsLoading } from "@/components/ui/dashboard-loading";
+import { RestaurantsError } from "@/components/ui/dashboard-error";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -235,32 +236,11 @@ export default function RestaurantsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="p-6 space-y-6">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-            <p className="mt-4 text-gray-600">Loading restaurants...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <RestaurantsLoading />;
   }
 
   if (error) {
-    return (
-      <div className="p-6 space-y-6">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <p className="text-red-600 mb-4">{error}</p>
-            <Button onClick={fetchRestaurants} variant="outline">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Try Again
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
+    return <RestaurantsError message={error} onRetry={fetchRestaurants} />;
   }
 
   return (

@@ -45,7 +45,7 @@ interface DatabaseMenuItem {
   description?: string;
   image_url?: string;
   is_available: boolean;
-  is_vegetarian: boolean;
+  is_vegetarian: boolean | null; // Fix: Allow null to match database type
   has_multiple_sizes: boolean;
   sizes?: Array<{
     id: string;
@@ -94,7 +94,7 @@ function MenuItemForm({
   const [name, setName] = useState(editItem?.name || "");
   const [description, setDescription] = useState(editItem?.description || "");
   const [isVegetarian, setIsVegetarian] = useState(
-    editItem?.is_vegetarian || false
+    editItem?.is_vegetarian ?? false // Handle null with nullish coalescing
   );
   const [hasMultipleSizes, setHasMultipleSizes] = useState(
     editItem?.has_multiple_sizes || false
@@ -128,7 +128,7 @@ function MenuItemForm({
     if (editItem) {
       setName(editItem.name);
       setDescription(editItem.description || "");
-      setIsVegetarian(editItem.is_vegetarian);
+      setIsVegetarian(editItem.is_vegetarian ?? false); // Handle null with nullish coalescing
       setHasMultipleSizes(editItem.has_multiple_sizes);
       setSinglePrice(
         !editItem.has_multiple_sizes
@@ -772,7 +772,7 @@ export default function CategoryCard({
                       <h4 className="text-sm font-medium truncate">
                         {item.name}
                       </h4>
-                      {item.is_vegetarian && (
+                      {item.is_vegetarian === true && ( // Explicitly check for true
                         <Badge variant="outline" className="text-xs">
                           Veg
                         </Badge>

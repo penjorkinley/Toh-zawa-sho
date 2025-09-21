@@ -22,6 +22,8 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
+import { PendingRegistrationsLoading } from "@/components/ui/dashboard-loading";
+import { PendingRegistrationsError } from "@/components/ui/dashboard-error";
 
 // Database interface (from your API)
 interface SignupRequest {
@@ -291,34 +293,15 @@ export default function PendingRegistrationsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="p-6 space-y-6">
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-          <span className="ml-2 text-gray-600">
-            Loading pending registrations...
-          </span>
-        </div>
-      </div>
-    );
+    return <PendingRegistrationsLoading />;
   }
 
   if (error) {
     return (
-      <div className="p-6 space-y-6">
-        <div className="flex items-center justify-center py-12 text-center">
-          <div className="space-y-3">
-            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto" />
-            <h3 className="text-lg font-medium text-gray-900">
-              Error Loading Data
-            </h3>
-            <p className="text-gray-600">{error}</p>
-            <Button onClick={fetchPendingRegistrations} className="mt-4">
-              Try Again
-            </Button>
-          </div>
-        </div>
-      </div>
+      <PendingRegistrationsError
+        message={error}
+        onRetry={fetchPendingRegistrations}
+      />
     );
   }
 
