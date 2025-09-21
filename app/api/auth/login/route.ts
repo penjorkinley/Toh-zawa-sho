@@ -76,18 +76,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user is approved
+    // Check if user is approved with specific status messages
     if (profile.status !== "approved") {
       await supabase.auth.signOut();
+
+      let errorMessage: string;
+      let statusCode = 403;
+
+      switch (profile.status) {
+        case "pending":
+          errorMessage =
+            "Your account is pending approval. Please wait for admin approval.";
+          break;
+        case "rejected":
+          // Check if this is a suspended restaurant or actually rejected signup
+          // Suspended restaurants have rejected status but are existing approved users
+          if (profile.role === "restaurant-owner") {
+            errorMessage =
+              "Your restaurant account has been suspended. Please contact support for assistance.";
+          } else {
+            errorMessage =
+              "Your account application has been rejected. Please contact support for more information.";
+          }
+          break;
+        default:
+          errorMessage =
+            "Your account status is invalid. Please contact support.";
+          break;
+      }
+
       return NextResponse.json(
         {
           success: false,
-          error:
-            profile.status === "pending"
-              ? "Your account is pending approval"
-              : "Your account has been rejected",
+          error: errorMessage,
+          status: profile.status, // Include status for frontend to handle differently
         },
-        { status: 403 }
+        { status: statusCode }
       );
     }
 

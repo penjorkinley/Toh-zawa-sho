@@ -1,7 +1,7 @@
 // app/super-admin-dashboard/restaurants/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/shadcn-button";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,13 @@ import {
   MapPin,
   Calendar,
   Filter,
+  Loader2,
+  RefreshCw,
+  Utensils,
+  Coffee,
+  ChefHat,
+  Wine,
+  Ban,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -40,63 +47,145 @@ interface Restaurant {
   location: string;
   registeredDate: string;
   status: "active" | "inactive" | "suspended";
-  logo?: string;
+  logo?: string | null;
+  description?: string | null;
+  coverPhoto?: string | null;
+}
+
+interface RestaurantsResponse {
+  restaurants: Restaurant[];
+  stats: {
+    total: number;
+    active: number;
+    inactive: number;
+    suspended: number;
+  };
 }
 
 export default function RestaurantsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterType, setFilterType] = useState<string>("all");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [stats, setStats] = useState({
+    total: 0,
+    active: 0,
+    inactive: 0,
+    suspended: 0,
+  });
 
-  // Mock data - replace with API calls
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([
-    {
-      id: "1",
-      businessName: "Thimphu Bistro",
-      ownerName: "Karma Wangchuk",
-      email: "karma@thimphubistro.bt",
-      phone: "+975-17-123-456",
-      businessType: "Restaurant",
-      location: "Thimphu, Bhutan",
-      registeredDate: "2024-01-10",
-      status: "active",
-      logo: "/images/bistro-logo.jpg",
-    },
-    {
-      id: "2",
-      businessName: "Paro Valley Cafe",
-      ownerName: "Tenzin Norbu",
-      email: "tenzin@parovalley.bt",
-      phone: "+975-17-789-012",
-      businessType: "Cafe",
-      location: "Paro, Bhutan",
-      registeredDate: "2024-01-08",
-      status: "active",
-    },
-    {
-      id: "3",
-      businessName: "Dragon Kitchen",
-      ownerName: "Sonam Choden",
-      email: "sonam@dragonkitchen.bt",
-      phone: "+975-17-345-678",
-      businessType: "Restaurant",
-      location: "Punakha, Bhutan",
-      registeredDate: "2024-01-05",
-      status: "inactive",
-    },
-  ]);
+  // Fetch restaurants data on component mount
+  useEffect(() => {
+    fetchRestaurants();
+  }, []);
 
-  const handleStatusToggle = (id: string) => {
-    setRestaurants((prev) =>
-      prev.map((restaurant) =>
+  const fetchRestaurants = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/admin/restaurants", {
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to fetch restaurants");
+      }
+
+      setRestaurants(result.data.restaurants || []);
+      setStats(
+        result.data.stats || { total: 0, active: 0, inactive: 0, suspended: 0 }
+      );
+    } catch (err) {
+      console.error("Error fetching restaurants:", err);
+      setError("Failed to fetch restaurants data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStatusToggle = async (id: string, newStatus: string) => {
+    // Show confirmation for suspension with detailed info
+    if (newStatus === "suspended") {
+      const restaurant = restaurants.find((r) => r.id === id);
+      const confirmed = window.confirm(
+        `⚠️ SUSPEND RESTAURANT: ${restaurant?.businessName}\n\n` +
+          `This action will:\n` +
+          `• Immediately disable their account\n` +
+          `• Prevent them from logging in\n` +
+          `• Block access to their dashboard\n` +
+          `• Show "Account Suspended" message on login\n\n` +
+          `The restaurant owner will need to contact support.\n\n` +
+          `Are you sure you want to proceed?`
+      );
+      if (!confirmed) return;
+    }
+
+    try {
+      const response = await fetch("/api/admin/restaurants", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          restaurantId: id,
+          newStatus: newStatus,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update restaurant status");
+      }
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || "Failed to update restaurant status");
+      }
+
+      // Update local state
+      setRestaurants((prev) =>
+        prev.map((restaurant) =>
+          restaurant.id === id
+            ? {
+                ...restaurant,
+                status: newStatus as "active" | "inactive" | "suspended",
+              }
+            : restaurant
+        )
+      );
+
+      // Recalculate stats
+      const updatedRestaurants = restaurants.map((restaurant) =>
         restaurant.id === id
           ? {
               ...restaurant,
-              status: restaurant.status === "active" ? "inactive" : "active",
+              status: newStatus as "active" | "inactive" | "suspended",
             }
           : restaurant
-      )
-    );
+      );
+
+      setStats({
+        total: updatedRestaurants.length,
+        active: updatedRestaurants.filter((r) => r.status === "active").length,
+        inactive: updatedRestaurants.filter((r) => r.status === "inactive")
+          .length,
+        suspended: updatedRestaurants.filter((r) => r.status === "suspended")
+          .length,
+      });
+    } catch (err) {
+      console.error("Error updating restaurant status:", err);
+      alert("Failed to update restaurant status. Please try again.");
+    }
   };
 
   const filteredRestaurants = restaurants
@@ -105,7 +194,6 @@ export default function RestaurantsPage() {
         restaurant.businessName
           .toLowerCase()
           .includes(searchTerm.toLowerCase()) ||
-        restaurant.ownerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         restaurant.location.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesStatus =
@@ -131,12 +219,49 @@ export default function RestaurantsPage() {
     }
   };
 
-  const stats = {
-    total: restaurants.length,
-    active: restaurants.filter((r) => r.status === "active").length,
-    inactive: restaurants.filter((r) => r.status === "inactive").length,
-    suspended: restaurants.filter((r) => r.status === "suspended").length,
+  const getBusinessTypeIcon = (type: string) => {
+    switch (type.toLowerCase()) {
+      case "restaurant":
+        return <Utensils className="h-3 w-3" />;
+      case "cafe":
+        return <Coffee className="h-3 w-3" />;
+      case "bakery":
+        return <ChefHat className="h-3 w-3" />;
+      case "bar":
+        return <Wine className="h-3 w-3" />;
+      default:
+        return <Utensils className="h-3 w-3" />;
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+            <p className="mt-4 text-gray-600">Loading restaurants...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <p className="text-red-600 mb-4">{error}</p>
+            <Button onClick={fetchRestaurants} variant="outline">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -210,7 +335,7 @@ export default function RestaurantsPage() {
             <div className="relative flex-1">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search restaurants..."
+                placeholder="Search by restaurant name or location..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-8"
@@ -221,7 +346,7 @@ export default function RestaurantsPage() {
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white">
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
@@ -233,7 +358,7 @@ export default function RestaurantsPage() {
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filter by type" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white">
                 <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="restaurant">Restaurant</SelectItem>
                 <SelectItem value="cafe">Cafe</SelectItem>
@@ -267,7 +392,7 @@ export default function RestaurantsPage() {
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-4">
                     <Avatar className="h-12 w-12">
-                      <AvatarImage src={restaurant.logo} />
+                      <AvatarImage src={restaurant.logo || undefined} />
                       <AvatarFallback>
                         {restaurant.businessName.substring(0, 2).toUpperCase()}
                       </AvatarFallback>
@@ -278,9 +403,6 @@ export default function RestaurantsPage() {
                         <h3 className="text-lg font-semibold">
                           {restaurant.businessName}
                         </h3>
-                        <p className="text-sm text-muted-foreground">
-                          Owner: {restaurant.ownerName}
-                        </p>
                       </div>
 
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -288,14 +410,19 @@ export default function RestaurantsPage() {
                           <MapPin className="h-3 w-3" />
                           {restaurant.location}
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          Registered: {restaurant.registeredDate}
-                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <Calendar className="h-3 w-3" />
+                        Registered: {restaurant.registeredDate}
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <Badge variant="secondary">
+                        <Badge
+                          variant="secondary"
+                          className="flex items-center gap-1"
+                        >
+                          {getBusinessTypeIcon(restaurant.businessType)}
                           {restaurant.businessType}
                         </Badge>
                         <Badge className={getStatusColor(restaurant.status)}>
@@ -313,22 +440,59 @@ export default function RestaurantsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => handleStatusToggle(restaurant.id)}
-                          className="cursor-pointer"
-                        >
-                          {restaurant.status === "active" ? (
-                            <>
+                        {restaurant.status === "active" ? (
+                          <>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleStatusToggle(restaurant.id, "inactive")
+                              }
+                              className="cursor-pointer"
+                            >
                               <PowerOff className="h-4 w-4 mr-2" />
                               Deactivate
-                            </>
-                          ) : (
-                            <>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleStatusToggle(restaurant.id, "suspended")
+                              }
+                              className="cursor-pointer text-red-600"
+                            >
+                              <Ban className="h-4 w-4 mr-2" />
+                              Suspend
+                            </DropdownMenuItem>
+                          </>
+                        ) : restaurant.status === "inactive" ? (
+                          <>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleStatusToggle(restaurant.id, "active")
+                              }
+                              className="cursor-pointer"
+                            >
                               <Power className="h-4 w-4 mr-2" />
                               Activate
-                            </>
-                          )}
-                        </DropdownMenuItem>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleStatusToggle(restaurant.id, "suspended")
+                              }
+                              className="cursor-pointer text-red-600"
+                            >
+                              <Ban className="h-4 w-4 mr-2" />
+                              Suspend
+                            </DropdownMenuItem>
+                          </>
+                        ) : (
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handleStatusToggle(restaurant.id, "active")
+                            }
+                            className="cursor-pointer text-green-600"
+                          >
+                            <Power className="h-4 w-4 mr-2" />
+                            Unsuspend
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>

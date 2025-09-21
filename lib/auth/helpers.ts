@@ -130,10 +130,32 @@ export async function loginUser(emailOrPhone: string, password: string) {
 
     if (profileError) throw profileError;
 
-    // Check if user is approved
+    // Check if user is approved with specific error messages
     if (profile.status !== "approved") {
       await supabase.auth.signOut();
-      throw new Error("Your account is still pending approval");
+
+      let errorMessage: string;
+      switch (profile.status) {
+        case "pending":
+          errorMessage =
+            "Your account is pending approval. Please wait for admin approval.";
+          break;
+        case "rejected":
+          if (profile.role === "restaurant-owner") {
+            errorMessage =
+              "Your restaurant account has been suspended. Please contact support for assistance.";
+          } else {
+            errorMessage =
+              "Your account application has been rejected. Please contact support for more information.";
+          }
+          break;
+        default:
+          errorMessage =
+            "Your account status is invalid. Please contact support.";
+          break;
+      }
+
+      throw new Error(errorMessage);
     }
 
     return {

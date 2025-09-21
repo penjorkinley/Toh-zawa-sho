@@ -107,12 +107,36 @@ export default function LoginPage() {
         return;
       }
 
-      // Check if user is approved
+      // Check if user is approved with specific status handling
       if (profile.status !== "approved") {
         await supabase.auth.signOut();
         toast.dismiss(loadingToast);
-        toast.error("Your account is still pending approval");
-        setError("Your account is still pending approval");
+
+        let errorMessage: string;
+
+        switch (profile.status) {
+          case "pending":
+            errorMessage =
+              "Your account is pending approval. Please wait for admin approval.";
+            break;
+          case "rejected":
+            // Check if this is a suspended restaurant or actually rejected signup
+            if (profile.role === "restaurant-owner") {
+              errorMessage =
+                "Your restaurant account has been suspended. Please contact support for assistance.";
+            } else {
+              errorMessage =
+                "Your account application has been rejected. Please contact support for more information.";
+            }
+            break;
+          default:
+            errorMessage =
+              "Your account status is invalid. Please contact support.";
+            break;
+        }
+
+        toast.error(errorMessage);
+        setError(errorMessage);
         setLoading(false);
         return;
       }
