@@ -340,6 +340,121 @@ export default function MenuSetupPage() {
     });
   };
 
+  // Handler for menu item operations
+  const handleMenuItemAdd = (
+    categoryId: string,
+    newItem: {
+      id: string;
+      name: string;
+      description?: string;
+      image_url?: string;
+      is_available: boolean;
+      is_vegetarian: boolean | null;
+      has_multiple_sizes: boolean;
+      sizes?: Array<{
+        id: string;
+        size_name: string;
+        price: number;
+      }>;
+    }
+  ) => {
+    console.log("➕ Adding new menu item to category:", categoryId, newItem);
+
+    // Update completeMenuData by adding the new item to the correct category
+    setCompleteMenuData((prevData) =>
+      prevData.map((category) =>
+        category.id === categoryId
+          ? {
+              ...category,
+              items: [...category.items, newItem],
+            }
+          : category
+      )
+    );
+  };
+
+  const handleMenuItemUpdate = (
+    categoryId: string,
+    updatedItem: {
+      id: string;
+      name: string;
+      description?: string;
+      image_url?: string;
+      is_available: boolean;
+      is_vegetarian: boolean | null;
+      has_multiple_sizes: boolean;
+      sizes?: Array<{
+        id: string;
+        size_name: string;
+        price: number;
+      }>;
+    }
+  ) => {
+    console.log("📝 Updating menu item in category:", categoryId, updatedItem);
+
+    // Update completeMenuData by replacing the updated item
+    setCompleteMenuData((prevData) =>
+      prevData.map((category) =>
+        category.id === categoryId
+          ? {
+              ...category,
+              items: category.items.map((item) =>
+                item.id === updatedItem.id ? updatedItem : item
+              ),
+            }
+          : category
+      )
+    );
+  };
+
+  const handleMenuItemDelete = (categoryId: string, itemId: string) => {
+    console.log("🗑️ Deleting menu item from category:", categoryId, itemId);
+
+    // Update completeMenuData by removing the deleted item
+    setCompleteMenuData((prevData) =>
+      prevData.map((category) =>
+        category.id === categoryId
+          ? {
+              ...category,
+              items: category.items.filter((item) => item.id !== itemId),
+            }
+          : category
+      )
+    );
+  };
+
+  // Handler for new category creation
+  const handleCategoryCreate = (
+    tempId: string,
+    newCategory: { id: string; name: string }
+  ) => {
+    console.log("➕ Creating new category:", tempId, newCategory);
+
+    // Replace the temporary category with the real database category
+    setManualCategories((categories) =>
+      categories.map((category) =>
+        category.id === tempId
+          ? {
+              id: newCategory.id, // Use real database ID
+              title: newCategory.name, // Use real database name
+              isOpen: false,
+              isEditing: false,
+            }
+          : category
+      )
+    );
+
+    // Add the new category to completeMenuData with empty items array
+    setCompleteMenuData((prevData) => [
+      ...prevData,
+      {
+        id: newCategory.id,
+        name: newCategory.name,
+        items: [],
+      },
+    ]);
+  };
+
   const handleCategoryOpenChange = (categoryId: string, isOpen: boolean) => {
     setManualCategories((categories) =>
       categories.map((category) =>
@@ -481,6 +596,10 @@ export default function MenuSetupPage() {
                 }
                 onDelete={() => handleDeleteCategory(category.id)}
                 onSave={handleSaveCategory}
+                onCategoryCreate={handleCategoryCreate}
+                onMenuItemAdd={handleMenuItemAdd}
+                onMenuItemUpdate={handleMenuItemUpdate}
+                onMenuItemDelete={handleMenuItemDelete}
               />
             );
           })}

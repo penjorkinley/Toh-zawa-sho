@@ -311,7 +311,7 @@ export async function deleteMenuCategory(categoryId: string): Promise<{
 // Create menu item with sizes
 export async function createMenuItem(data: CreateMenuItemDTO): Promise<{
   success: boolean;
-  item?: MenuItem;
+  item?: MenuItem & { sizes: MenuItemSize[] };
   error?: string;
 }> {
   try {
@@ -337,6 +337,8 @@ export async function createMenuItem(data: CreateMenuItemDTO): Promise<{
 
     if (itemError) throw itemError;
 
+    let sizes: MenuItemSize[] = [];
+
     // Then create the sizes
     if (data.sizes && data.sizes.length > 0) {
       const sizesData = data.sizes.map((size, index) => ({
@@ -346,15 +348,23 @@ export async function createMenuItem(data: CreateMenuItemDTO): Promise<{
         display_order: size.display_order || index,
       }));
 
-      const { error: sizesError } = await supabase
+      const { data: createdSizes, error: sizesError } = await supabase
         .from("menu_item_sizes")
-        .insert(sizesData);
+        .insert(sizesData)
+        .select();
 
       if (sizesError) throw sizesError;
+      sizes = createdSizes || [];
     }
 
+    // Return the complete item with sizes
+    const completeItem = {
+      ...item,
+      sizes: sizes.sort((a, b) => a.display_order - b.display_order),
+    };
+
     revalidatePath("/owner-dashboard/menu-setup");
-    return { success: true, item };
+    return { success: true, item: completeItem };
   } catch (error) {
     console.error("Error creating menu item:", error);
     return {
@@ -399,7 +409,7 @@ export async function updateMenuItem(
   data: UpdateMenuItemDTO
 ): Promise<{
   success: boolean;
-  item?: MenuItem;
+  item?: MenuItem & { sizes: MenuItemSize[] };
   error?: string;
 }> {
   try {
@@ -424,6 +434,8 @@ export async function updateMenuItem(
 
     if (itemError) throw itemError;
 
+    let sizes: MenuItemSize[] = [];
+
     // If sizes are provided, update them
     if (data.sizes) {
       // First, delete existing sizes
@@ -443,16 +455,34 @@ export async function updateMenuItem(
           display_order: size.display_order || index,
         }));
 
-        const { error: sizesError } = await supabase
+        const { data: createdSizes, error: sizesError } = await supabase
           .from("menu_item_sizes")
-          .insert(sizesData);
+          .insert(sizesData)
+          .select();
 
         if (sizesError) throw sizesError;
+        sizes = createdSizes || [];
       }
+    } else {
+      // If no sizes provided, fetch existing sizes
+      const { data: existingSizes, error: sizesError } = await supabase
+        .from("menu_item_sizes")
+        .select("*")
+        .eq("item_id", itemId)
+        .order("display_order", { ascending: true });
+
+      if (sizesError) throw sizesError;
+      sizes = existingSizes || [];
     }
 
+    // Return the complete item with sizes
+    const completeItem = {
+      ...item,
+      sizes: sizes.sort((a, b) => a.display_order - b.display_order),
+    };
+
     revalidatePath("/owner-dashboard/menu-setup");
-    return { success: true, item };
+    return { success: true, item: completeItem };
   } catch (error) {
     console.error("Error updating menu item:", error);
     return {

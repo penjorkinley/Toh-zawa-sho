@@ -15,6 +15,7 @@ import {
   X,
   Upload,
   ImageIcon,
+  Loader2,
 } from "lucide-react";
 import { Button } from "../ui/shadcn-button";
 import { Input } from "../ui/input";
@@ -38,7 +39,7 @@ import {
   updateMenuItem,
 } from "@/lib/actions/menu/actions";
 
-// Database menu item interface (with sizes)
+// Database menu item interface (with sizes) - matches parent component type
 interface DatabaseMenuItem {
   id: string;
   name: string;
@@ -63,6 +64,18 @@ interface CategoryCardProps {
   onOpenChange: (isOpen: boolean) => void;
   onDelete?: (id: string) => void;
   onSave?: (id: string, newTitle: string) => void;
+  // New callback for category creation
+  onCategoryCreate?: (
+    tempId: string,
+    newCategory: { id: string; name: string }
+  ) => void;
+  // New callbacks for menu item operations
+  onMenuItemAdd?: (categoryId: string, newItem: DatabaseMenuItem) => void;
+  onMenuItemUpdate?: (
+    categoryId: string,
+    updatedItem: DatabaseMenuItem
+  ) => void;
+  onMenuItemDelete?: (categoryId: string, itemId: string) => void;
 }
 
 // Enhanced Menu Item Form Component (handles both add and edit)
@@ -79,6 +92,7 @@ interface MenuItemFormProps {
     image_url: string;
   }) => void;
   editItem?: DatabaseMenuItem; // Optional - if provided, this is edit mode
+  isLoading?: boolean; // Loading state for save operation
 }
 
 function MenuItemForm({
@@ -87,6 +101,7 @@ function MenuItemForm({
   onDelete,
   onSave,
   editItem,
+  isLoading = false,
 }: MenuItemFormProps) {
   const isEditMode = !!editItem;
 
@@ -282,6 +297,7 @@ function MenuItemForm({
             placeholder="Enter item name"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            disabled={isLoading || isSaving || isUploadingImage}
           />
         </div>
 
@@ -292,6 +308,7 @@ function MenuItemForm({
             placeholder="Enter item description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+            disabled={isLoading || isSaving || isUploadingImage}
             rows={2}
           />
         </div>
@@ -342,6 +359,7 @@ function MenuItemForm({
             id="vegetarian"
             checked={isVegetarian}
             onCheckedChange={(checked) => setIsVegetarian(checked as boolean)}
+            disabled={isLoading || isSaving || isUploadingImage}
           />
           <label htmlFor="vegetarian" className="text-sm font-medium">
             Vegetarian Item
@@ -356,6 +374,7 @@ function MenuItemForm({
               variant={!hasMultipleSizes ? "default" : "outline"}
               size="sm"
               onClick={() => setHasMultipleSizes(false)}
+              disabled={isLoading || isSaving || isUploadingImage}
             >
               Single Price
             </Button>
@@ -363,6 +382,7 @@ function MenuItemForm({
               variant={hasMultipleSizes ? "default" : "outline"}
               size="sm"
               onClick={() => setHasMultipleSizes(true)}
+              disabled={isLoading || isSaving || isUploadingImage}
             >
               Multiple Sizes
             </Button>
@@ -382,6 +402,7 @@ function MenuItemForm({
                     updateSize(index, "size_name", e.target.value)
                   }
                   className="flex-1"
+                  disabled={isLoading || isSaving || isUploadingImage}
                 />
                 <Input
                   placeholder="Price"
@@ -389,19 +410,26 @@ function MenuItemForm({
                   value={size.price}
                   onChange={(e) => updateSize(index, "price", e.target.value)}
                   className="w-24"
+                  disabled={isLoading || isSaving || isUploadingImage}
                 />
                 {sizes.length > 1 && (
                   <Button
                     variant="outline"
                     size="icon"
                     onClick={() => removeSize(index)}
+                    disabled={isLoading || isSaving || isUploadingImage}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 )}
               </div>
             ))}
-            <Button variant="outline" size="sm" onClick={addSize}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={addSize}
+              disabled={isLoading || isSaving || isUploadingImage}
+            >
               <Plus className="h-4 w-4 mr-2" />
               Add Size
             </Button>
@@ -414,20 +442,30 @@ function MenuItemForm({
               type="number"
               value={singlePrice}
               onChange={(e) => setSinglePrice(e.target.value)}
+              disabled={isLoading || isSaving || isUploadingImage}
             />
           </div>
         )}
 
         {/* Action Buttons */}
         <div className="flex justify-end gap-2 pt-4 border-t">
-          <Button variant="outline" onClick={onDelete}>
+          <Button
+            variant="outline"
+            onClick={onDelete}
+            disabled={isLoading || isSaving || isUploadingImage}
+          >
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={isSaving || isUploadingImage}>
+          <Button
+            onClick={handleSave}
+            disabled={isLoading || isSaving || isUploadingImage}
+          >
             {isUploadingImage
               ? "Uploading..."
-              : isSaving
-              ? "Saving..."
+              : isLoading || isSaving
+              ? isEditMode
+                ? "Updating..."
+                : "Saving..."
               : isEditMode
               ? "Update Item"
               : "Save Item"}
@@ -447,11 +485,24 @@ export default function CategoryCard({
   onOpenChange,
   onDelete,
   onSave,
+  onCategoryCreate,
+  onMenuItemAdd,
+  onMenuItemUpdate,
+  onMenuItemDelete,
 }: CategoryCardProps) {
   const [isEditingLocal, setIsEditingLocal] = useState(isEditing);
   const [editedTitle, setEditedTitle] = useState(title);
   const [showNewItemForm, setShowNewItemForm] = useState(false);
   const [editingItem, setEditingItem] = useState<DatabaseMenuItem | null>(null);
+
+  // Loading states for menu item operations
+  const [isCreatingItem, setIsCreatingItem] = useState(false);
+  const [isUpdatingItem, setIsUpdatingItem] = useState(false);
+  const [isDeletingItem, setIsDeletingItem] = useState<string | null>(null); // Store the ID of item being deleted
+
+  // Loading state for category creation
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+
   const isNewCategory = !title;
 
   React.useEffect(() => {
@@ -469,6 +520,7 @@ export default function CategoryCard({
     image_url: string;
   }) => {
     try {
+      setIsCreatingItem(true);
       console.log("💾 Creating new menu item:", itemData);
 
       const result = await createMenuItem({
@@ -482,10 +534,14 @@ export default function CategoryCard({
         sizes: itemData.sizes,
       });
 
-      if (result.success) {
+      if (result.success && result.item) {
         console.log("✅ Menu item created successfully");
         setShowNewItemForm(false);
-        window.location.reload();
+
+        // Use callback to update parent state instead of page refresh
+        if (onMenuItemAdd) {
+          onMenuItemAdd(id, result.item);
+        }
       } else {
         console.error("❌ Failed to save menu item:", result.error);
         alert("Failed to save menu item: " + result.error);
@@ -493,6 +549,8 @@ export default function CategoryCard({
     } catch (error) {
       console.error("❌ Error saving menu item:", error);
       alert("Error saving menu item");
+    } finally {
+      setIsCreatingItem(false);
     }
   };
 
@@ -507,6 +565,7 @@ export default function CategoryCard({
     if (!editingItem) return;
 
     try {
+      setIsUpdatingItem(true);
       console.log("💾 Updating menu item:", editingItem.id, itemData);
 
       const result = await updateMenuItem(editingItem.id, {
@@ -519,10 +578,14 @@ export default function CategoryCard({
         sizes: itemData.sizes,
       });
 
-      if (result.success) {
+      if (result.success && result.item) {
         console.log("✅ Menu item updated successfully");
         setEditingItem(null);
-        window.location.reload();
+
+        // Use callback to update parent state instead of page refresh
+        if (onMenuItemUpdate) {
+          onMenuItemUpdate(id, result.item);
+        }
       } else {
         console.error("❌ Failed to update menu item:", result.error);
         alert("Failed to update menu item: " + result.error);
@@ -530,21 +593,31 @@ export default function CategoryCard({
     } catch (error) {
       console.error("❌ Error updating menu item:", error);
       alert("Error updating menu item");
+    } finally {
+      setIsUpdatingItem(false);
     }
   };
 
   const handleDeleteExistingItem = async (itemId: string) => {
     if (window.confirm("Are you sure you want to delete this item?")) {
       try {
+        setIsDeletingItem(itemId);
         const result = await deleteMenuItem(itemId);
         if (result.success) {
-          window.location.reload();
+          console.log("✅ Menu item deleted successfully");
+
+          // Use callback to update parent state instead of page refresh
+          if (onMenuItemDelete) {
+            onMenuItemDelete(id, itemId);
+          }
         } else {
           alert("Failed to delete menu item");
         }
       } catch (error) {
         console.error("Error deleting menu item:", error);
         alert("Error deleting menu item");
+      } finally {
+        setIsDeletingItem(null);
       }
     }
   };
@@ -562,16 +635,18 @@ export default function CategoryCard({
       if (isTemporaryCategory) {
         console.log("🆕 Creating new category in database");
         try {
+          setIsCreatingCategory(true);
           const result = await createMenuCategory({
             name: editedTitle.trim(),
           });
-          if (result.success) {
+          if (result.success && result.category) {
             console.log("✅ Category created successfully:", result.category);
             setIsEditingLocal(false);
-            if (onSave) {
-              onSave(id, editedTitle.trim());
+
+            // Use callback to update parent state instead of page refresh
+            if (onCategoryCreate) {
+              onCategoryCreate(id, result.category);
             }
-            window.location.reload();
           } else {
             console.error("❌ Failed to create category:", result.error);
             alert("Failed to create category");
@@ -579,6 +654,8 @@ export default function CategoryCard({
         } catch (error) {
           console.error("❌ Error creating category:", error);
           alert("Error creating category");
+        } finally {
+          setIsCreatingCategory(false);
         }
       } else if (onSave) {
         console.log("📝 Updating existing category via onSave callback");
@@ -652,6 +729,7 @@ export default function CategoryCard({
               }
             }}
             autoFocus
+            disabled={isCreatingCategory}
           />
           <div className="flex justify-end gap-2">
             <Button
@@ -659,6 +737,7 @@ export default function CategoryCard({
               className="border-primary text-primary"
               size="sm"
               onClick={handleCancelEdit}
+              disabled={isCreatingCategory}
             >
               Cancel
             </Button>
@@ -666,9 +745,16 @@ export default function CategoryCard({
               className="bg-primary text-white"
               size="sm"
               onClick={handleSaveEdit}
-              disabled={!editedTitle.trim()}
+              disabled={!editedTitle.trim() || isCreatingCategory}
             >
-              Save
+              {isCreatingCategory ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Save"
+              )}
             </Button>
           </div>
         </CardContent>
@@ -801,6 +887,7 @@ export default function CategoryCard({
                       variant="ghost"
                       size="sm"
                       onClick={() => setEditingItem(item)}
+                      disabled={isDeletingItem === item.id}
                     >
                       <Edit className="h-3 w-3" />
                     </Button>
@@ -809,8 +896,13 @@ export default function CategoryCard({
                       size="sm"
                       onClick={() => handleDeleteExistingItem(item.id)}
                       className="text-red-600 hover:text-red-700"
+                      disabled={isDeletingItem === item.id}
                     >
-                      <Trash2 className="h-3 w-3" />
+                      {isDeletingItem === item.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3 w-3" />
+                      )}
                     </Button>
                   </div>
                 </div>
@@ -826,6 +918,7 @@ export default function CategoryCard({
               onDelete={() => setEditingItem(null)}
               onSave={handleSaveEditItem}
               editItem={editingItem}
+              isLoading={isUpdatingItem}
             />
           )}
 
@@ -836,6 +929,7 @@ export default function CategoryCard({
               onToggle={setShowNewItemForm}
               onDelete={() => setShowNewItemForm(false)}
               onSave={handleSaveNewItem}
+              isLoading={isCreatingItem}
             />
           )}
 
@@ -844,7 +938,13 @@ export default function CategoryCard({
             variant="outline"
             className="w-full border-dashed border-primary text-primary hover:bg-primary/5"
             onClick={() => setShowNewItemForm(true)}
-            disabled={showNewItemForm || !!editingItem}
+            disabled={
+              showNewItemForm ||
+              !!editingItem ||
+              isCreatingItem ||
+              isUpdatingItem ||
+              !!isDeletingItem
+            }
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Item to {title}
