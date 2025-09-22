@@ -2,11 +2,13 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import * as z from "zod";
+import toast from "react-hot-toast";
 import { firstStepSchema } from "@/lib/validations/auth/signup";
 import AuthLayout from "@/components/auth/AuthLayout";
 import FormContainer from "@/components/auth/FormContainer";
 import InputField from "@/components/ui/InputField";
 import { Button } from "@/components/ui/shadcn-button";
+import PasswordStrengthIndicator from "@/components/ui/PasswordStrengthIndicator";
 import type { SignupFormData } from "@/lib/validations/auth/signup";
 
 interface FirstStepSignupProps {
@@ -46,12 +48,31 @@ export default function FirstStepSignup({
     } catch (error) {
       if (error instanceof z.ZodError) {
         const newErrors: Record<string, string> = {};
+        const passwordErrors: string[] = [];
+
         error.errors.forEach((err) => {
           if (err.path) {
             const fieldName = err.path[0].toString();
-            newErrors[fieldName] = err.message;
+            if (fieldName === "password") {
+              passwordErrors.push(err.message);
+            } else {
+              newErrors[fieldName] = err.message;
+            }
           }
         });
+
+        // Show password validation errors as toast notifications
+        if (passwordErrors.length > 0) {
+          passwordErrors.forEach((errorMsg) => {
+            toast.error(errorMsg, {
+              duration: 4000,
+              position: "top-right",
+            });
+          });
+          // Still set the error for the input field styling
+          newErrors.password = "Please check password requirements";
+        }
+
         setErrors(newErrors);
       }
       return false;
@@ -115,18 +136,19 @@ export default function FirstStepSignup({
                 errors.phoneNumber ? "border-red-500" : ""
               }`}
             />
-            <InputField
-              type="password"
-              placeholder="Enter Password"
-              label="Password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              error={errors.password}
-              className={`mb-4 lg:mb-5 ${
-                errors.password ? "border-red-500" : ""
-              }`}
-            />
+            <div className="mb-4 lg:mb-5">
+              <InputField
+                type="password"
+                placeholder="Enter Password"
+                label="Password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                error={errors.password}
+                className={`${errors.password ? "border-red-500" : ""}`}
+              />
+              <PasswordStrengthIndicator password={formData.password} />
+            </div>
             <InputField
               type="password"
               placeholder="Enter Password Again"

@@ -1,13 +1,35 @@
 // lib/validations/auth/signup.ts
 import { z } from "zod";
 
+// Strong password validation function
+const strongPasswordValidation = z
+  .string()
+  .min(8, "Password must be at least 8 characters")
+  .max(128, "Password must not exceed 128 characters")
+  .refine(
+    (password) => /[a-z]/.test(password),
+    "Password must contain at least one lowercase letter"
+  )
+  .refine(
+    (password) => /[A-Z]/.test(password),
+    "Password must contain at least one uppercase letter"
+  )
+  .refine(
+    (password) => /\d/.test(password),
+    "Password must contain at least one number"
+  )
+  .refine(
+    (password) => /[!@#$%^&*(),.?":{}|<>]/.test(password),
+    'Password must contain at least one special character (!@#$%^&*(),.?":{}|<>)'
+  );
+
 // First step validation (personal details)
 export const firstStepSchema = z
   .object({
     businessName: z.string().min(1, "Business name is required"),
     email: z.string().email("Invalid email address"),
     phoneNumber: z.string().min(1, "Phone number is required"),
-    password: z.string().min(8, "Password must be at least 8 characters"),
+    password: strongPasswordValidation,
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -46,7 +68,7 @@ export const signupSchema = z
     businessName: z.string().min(1, "Business name is required"),
     email: z.string().email("Invalid email address"),
     phoneNumber: z.string().min(1, "Phone number is required"),
-    password: z.string().min(8, "Password must be at least 8 characters"),
+    password: strongPasswordValidation,
     confirmPassword: z.string(),
     licenseFile: z.any().optional(),
   })

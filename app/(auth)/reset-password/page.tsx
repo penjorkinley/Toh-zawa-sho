@@ -2,12 +2,46 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import * as z from "zod";
 import FormContainer from "@/components/auth/FormContainer";
 import InputField from "@/components/ui/InputField";
 import { Button } from "@/components/ui/shadcn-button";
 import BackButton from "@/components/ui/BackButton";
+import PasswordStrengthIndicator from "@/components/ui/PasswordStrengthIndicator";
 import Image from "next/image";
 import toast from "react-hot-toast";
+
+// Strong password validation schema
+const strongPasswordValidation = z
+  .string()
+  .min(8, "Password must be at least 8 characters")
+  .max(128, "Password must not exceed 128 characters")
+  .refine(
+    (password) => /[a-z]/.test(password),
+    "Password must contain at least one lowercase letter"
+  )
+  .refine(
+    (password) => /[A-Z]/.test(password),
+    "Password must contain at least one uppercase letter"
+  )
+  .refine(
+    (password) => /\d/.test(password),
+    "Password must contain at least one number"
+  )
+  .refine(
+    (password) => /[!@#$%^&*(),.?":{}|<>]/.test(password),
+    'Password must contain at least one special character (!@#$%^&*(),.?":{}|<>)'
+  );
+
+const resetPasswordSchema = z
+  .object({
+    newPassword: strongPasswordValidation,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -39,6 +73,43 @@ export default function ResetPasswordPage() {
     setIsLoading(true);
     setErrors({});
 
+    // Validate the form data
+    try {
+      resetPasswordSchema.parse(formData);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const newErrors: any = {};
+        const passwordErrors: string[] = [];
+
+        error.errors.forEach((err) => {
+          if (err.path) {
+            const fieldName = err.path[0].toString();
+            if (fieldName === "newPassword") {
+              passwordErrors.push(err.message);
+            } else {
+              newErrors[fieldName] = err.message;
+            }
+          }
+        });
+
+        // Show password validation errors as toast notifications
+        if (passwordErrors.length > 0) {
+          passwordErrors.forEach((errorMsg) => {
+            toast.error(errorMsg, {
+              duration: 4000,
+              position: "top-right",
+            });
+          });
+          // Still set the error for the input field styling
+          newErrors.newPassword = "Please check password requirements";
+        }
+
+        setErrors(newErrors);
+        setIsLoading(false);
+        return;
+      }
+    }
+
     try {
       const response = await fetch("/api/auth/reset-password", {
         method: "POST",
@@ -56,7 +127,10 @@ export default function ResetPasswordPage() {
 
       if (response.ok) {
         toast.success(
-          "Password reset successfully! You can now sign in with your new password."
+          "Password reset successfully! You can now sign in with your new password.",
+          {
+            position: "top-right",
+          }
         );
         router.push("/signin");
       } else {
@@ -120,15 +194,18 @@ export default function ResetPasswordPage() {
                   </div>
                 )}
 
-                <InputField
-                  type="password"
-                  placeholder="Enter New Password"
-                  label="New Password"
-                  name="newPassword"
-                  value={formData.newPassword}
-                  onChange={handleInputChange}
-                  error={errors.newPassword}
-                />
+                <div className="mb-4">
+                  <InputField
+                    type="password"
+                    placeholder="Enter New Password"
+                    label="New Password"
+                    name="newPassword"
+                    value={formData.newPassword}
+                    onChange={handleInputChange}
+                    error={errors.newPassword}
+                  />
+                  <PasswordStrengthIndicator password={formData.newPassword} />
+                </div>
 
                 <InputField
                   type="password"
