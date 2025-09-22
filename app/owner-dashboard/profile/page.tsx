@@ -1,10 +1,9 @@
 "use client";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AccountInfo from "./_components/accountInfo";
 import ImageUploader from "@/components/ui/ImageUploader";
 import { useState, useEffect } from "react";
-import PasswordCard from "./_components/passwordCard";
+// import PasswordCard from "./_components/passwordCard"; // Commented out for future use
 import {
   getProfileData,
   updateProfileData,
@@ -148,22 +147,10 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* Tabs for Mobile */}
-          <Tabs defaultValue="account" className="w-full px-4 mt-1">
-            <TabsList className="grid w-full grid-cols-2 mb-4 bg-primary/80">
-              <TabsTrigger value="account">Account Info</TabsTrigger>
-              <TabsTrigger value="password">Change Password</TabsTrigger>
-            </TabsList>
-
-            <div className="pb-4">
-              <TabsContent value="account" className="mt-0">
-                <AccountInfo />
-              </TabsContent>
-              <TabsContent value="password" className="mt-0">
-                <PasswordCard />
-              </TabsContent>
-            </div>
-          </Tabs>
+          {/* Account Info for Mobile */}
+          <div className="p-4">
+            <AccountInfo />
+          </div>
         </div>
       </div>
 
@@ -194,21 +181,9 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Right Column - Tabs */}
+          {/* Right Column - Account Info */}
           <div className="lg:col-span-1">
-            <Tabs defaultValue="account" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6 bg-primary/80">
-                <TabsTrigger value="account">Account Info</TabsTrigger>
-                <TabsTrigger value="password">Change Password</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="account" className="mt-0">
-                <AccountInfo />
-              </TabsContent>
-              <TabsContent value="password" className="mt-0">
-                <PasswordCard />
-              </TabsContent>
-            </Tabs>
+            <AccountInfo />
           </div>
         </div>
       </div>
