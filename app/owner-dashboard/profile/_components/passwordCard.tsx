@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/shadcn-button";
-import InputField from "@/components/ui/InputField";
 import { changePassword } from "@/lib/actions/profile/actions";
 import toast from "react-hot-toast";
 import { Eye, EyeOff } from "lucide-react";

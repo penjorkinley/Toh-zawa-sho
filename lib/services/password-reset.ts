@@ -40,6 +40,8 @@ export class PasswordResetService {
   private static readonly OTP_LENGTH = 6;
   private static readonly TOKEN_EXPIRY_MINUTES = 5; // Production: 5 minutes
   private static readonly MAX_ATTEMPTS = 3;
+  private static lastCleanup: Date | null = null;
+  private static readonly CLEANUP_INTERVAL_MINUTES = 2; // Run cleanup every 2 minutes
 
   /**
    * Generate a secure random OTP code
@@ -119,8 +121,8 @@ export class PasswordResetService {
     email: string
   ): Promise<CreateTokenResult> {
     try {
-      // Clean up expired tokens first
-      await this.cleanupExpiredTokens();
+      // Clean up expired tokens first (smart cleanup)
+      await this.performSmartCleanup();
 
       // Check if user exists
       const userCheck = await this.checkUserExists(email);
@@ -183,8 +185,8 @@ export class PasswordResetService {
     otpCode: string
   ): Promise<ValidateOtpResult> {
     try {
-      // Clean up expired tokens first
-      await this.cleanupExpiredTokens();
+      // Clean up expired tokens first (smart cleanup)
+      await this.performSmartCleanup();
 
       // Find the most recent valid token for this email
       const { data: tokenData, error: fetchError } = await supabaseAdmin
@@ -312,14 +314,53 @@ export class PasswordResetService {
   /**
    * Clean up expired tokens (utility function)
    */
+  /**
+   * Smart cleanup that only runs if enough time has passed since last cleanup
+   */
+  private static async performSmartCleanup(): Promise<void> {
+    const now = new Date();
+    const shouldCleanup =
+      !this.lastCleanup ||
+      now.getTime() - this.lastCleanup.getTime() >
+        this.CLEANUP_INTERVAL_MINUTES * 60 * 1000;
+
+    if (shouldCleanup) {
+      await this.cleanupExpiredTokens();
+      this.lastCleanup = now;
+    }
+  }
+
   static async cleanupExpiredTokens(): Promise<void> {
     try {
-      await supabaseAdmin
+      const now = new Date().toISOString();
+
+      // Delete expired tokens and used tokens in separate operations for clarity
+      const { error: expiredError } = await supabaseAdmin
         .from("password_reset_tokens")
         .delete()
-        .or("expires_at.lt.now(),used.eq.true");
+        .lt("expires_at", now);
+
+      if (expiredError) {
+        console.error("Error deleting expired tokens:", expiredError);
+      }
+
+      const { error: usedError } = await supabaseAdmin
+        .from("password_reset_tokens")
+        .delete()
+        .eq("used", true);
+
+      if (usedError) {
+        console.error("Error deleting used tokens:", usedError);
+      }
+
+      if (expiredError || usedError) {
+        throw new Error("Failed to cleanup some tokens");
+      }
+
+      console.log("Successfully cleaned up expired and used tokens at:", now);
     } catch (error) {
       console.error("Error cleaning up expired tokens:", error);
+      throw error; // Re-throw to handle in calling code
     }
   }
 

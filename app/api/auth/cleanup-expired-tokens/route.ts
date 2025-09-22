@@ -8,16 +8,23 @@ export async function POST(request: NextRequest) {
   try {
     // For now, we'll allow this endpoint to run without authentication
     // In production, you could add IP whitelisting or move this to a cron job
+    console.log("Starting cleanup of expired tokens...");
     await PasswordResetService.cleanupExpiredTokens();
 
     return NextResponse.json({
       success: true,
       message: "Expired tokens cleaned up successfully",
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
     console.error("Cleanup error:", error);
     return NextResponse.json(
-      { success: false, error: "Internal server error" },
+      {
+        success: false,
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : "Unknown error",
+        timestamp: new Date().toISOString(),
+      },
       { status: 500 }
     );
   }
