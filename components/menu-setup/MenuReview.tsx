@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { type CategoryTemplate } from "@/lib/data/menu-templates";
 import { uploadMenuItemImage } from "@/lib/actions/menu/actions";
+import { uploadImageWithCompression } from "@/lib/utils/upload-with-compression";
 import {
   ArrowLeft,
   Check,
@@ -103,11 +104,11 @@ export default function MenuReview({
       const templateItem = category.template.items.find(
         (templateItem) => templateItem.name === item.name
       );
-      return templateItem?.image || "/default-food-img.jpg";
+      return templateItem?.image || "/default-food-img.png";
     }
 
     // Fallback to default image
-    return "/default-food-img.jpg";
+    return "/default-food-img.png";
   };
 
   const handleEditItem = (
@@ -144,7 +145,10 @@ export default function MenuReview({
           // If there's a new image to upload
           if (editingItemImage) {
             try {
-              const uploadResult = await uploadMenuItemImage(editingItemImage);
+              const uploadResult = await uploadImageWithCompression(
+                editingItemImage,
+                uploadMenuItemImage
+              );
               if (uploadResult.success && uploadResult.url) {
                 imageUrl = uploadResult.url;
               } else {

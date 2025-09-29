@@ -60,46 +60,52 @@ export default function MenuItemModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
 
       {/* Modal */}
-      <div className="relative bg-white rounded-2xl mx-4 max-w-sm w-full max-h-[85vh] overflow-hidden shadow-xl flex flex-col">
+      <div className="relative bg-white rounded-3xl mx-auto max-w-md w-full h-[60vh] overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95 duration-200">
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-black/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/30 transition-colors"
+          className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-gray-700 hover:bg-white hover:text-gray-900 transition-all duration-200 shadow-lg hover:shadow-xl"
         >
-          <X className="h-4 w-4" />
+          <X className="h-5 w-5" />
         </button>
 
         {/* Food Image */}
-        <div className="relative h-48 bg-gray-200 flex-shrink-0">
+        <div className="relative h-56 bg-gradient-to-br from-gray-100 to-gray-200 flex-shrink-0 overflow-hidden">
           <Image
             src={item.image}
             alt={item.name}
             fill
-            className="object-cover"
+            className="object-cover transition-transform duration-300 hover:scale-105"
             sizes="(max-width: 768px) 100vw, 50vw"
             onError={(e) => {
-              e.currentTarget.src = "/default-food-img.jpg";
+              e.currentTarget.src = "/default-food-img.png";
             }}
           />
 
+          {/* Gradient overlay for better text readability */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
+
           {/* Veg/Non-veg Indicator - Only show if preference is specified (not null) */}
           {item.isVeg !== null && (
-            <div className="absolute bottom-3 left-3">
+            <div className="absolute bottom-4 left-4">
               <div
-                className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shadow-lg backdrop-blur-sm ${
                   item.isVeg
-                    ? "border-green-600 bg-white"
-                    : "border-red-600 bg-white"
+                    ? "border-green-500 bg-white/95"
+                    : "border-red-500 bg-white/95"
                 }`}
               >
                 <div
-                  className={`w-2.5 h-2.5 rounded ${
-                    item.isVeg ? "bg-green-600" : "bg-red-600"
+                  className={`w-3 h-3 rounded-full ${
+                    item.isVeg ? "bg-green-500" : "bg-red-500"
                   }`}
                 />
               </div>
@@ -108,43 +114,68 @@ export default function MenuItemModal({
         </div>
 
         {/* Scrollable Content Container */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-4">
-            {/* Item Name */}
-            <h2 className="text-lg font-semibold text-gray-800 mb-2">
-              {item.name}
-            </h2>
-
-            {/* Show price only if single size */}
-            {!hasMultipleSizes && (
-              <div className="text-lg font-bold text-primary mb-3">
-                Nu. {getCurrentPrice()}
+        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+          <div className="p-4 space-y-4">
+            {/* Header Section - Better aligned */}
+            <div className="space-y-3">
+              {/* Name and Price - Centered approach */}
+              <div className="text-center space-y-2">
+                <h1 className="text-lg font-bold text-gray-900 leading-tight">
+                  {item.name}
+                </h1>
+                {!hasMultipleSizes && (
+                  <div className="inline-flex items-center justify-center">
+                    <span className="text-lg font-bold text-orange-600">
+                      Nu. {getCurrentPrice()}
+                    </span>
+                  </div>
+                )}
               </div>
-            )}
 
-            {/* Size Selection for multiple sizes - Scrollable if many options */}
+              {/* Description with better spacing */}
+              {item.description && (
+                <div className="text-center px-2">
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    {item.description}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Size Selection for multiple sizes - Clean centered design */}
             {hasMultipleSizes && (
-              <div className="mb-4">
-                <div
-                  className={`space-y-2 ${
-                    item.sizes.length > 6 ? "max-h-48 overflow-y-auto pr-2" : ""
-                  }`}
-                >
-                  {item.sizes.map((size) => {
+              <div className="space-y-3">
+                <div className="text-center">
+                  <h3 className="text-base font-semibold text-gray-800 mb-1">
+                    Available Sizes
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    Select your preferred size
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  {item.sizes.map((size, index) => {
                     const sizePrice =
                       item.price[size.toLowerCase()] ||
                       item.price[Object.keys(item.price)[0]];
                     return (
                       <div
                         key={size}
-                        className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0"
+                        className="group bg-white hover:bg-orange-50 rounded-xl p-3 transition-all duration-200 border border-gray-100 hover:border-orange-200 hover:shadow-sm cursor-pointer"
                       >
-                        <span className="font-medium text-gray-700">
-                          {size}
-                        </span>
-                        <span className="font-semibold text-gray-800">
-                          Nu. {sizePrice}
-                        </span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-2.5 h-2.5 rounded-full bg-orange-400 group-hover:bg-orange-500 transition-colors"></div>
+                            <span className="text-sm font-semibold text-gray-800 group-hover:text-gray-900">
+                              {size}
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-sm font-bold text-orange-600 group-hover:text-orange-700">
+                              Nu. {sizePrice}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     );
                   })}
@@ -152,10 +183,8 @@ export default function MenuItemModal({
               </div>
             )}
 
-            {/* Description */}
-            <p className="text-gray-600 text-sm leading-relaxed">
-              {item.description}
-            </p>
+            {/* Additional spacing at bottom for better scrolling */}
+            <div className="h-4"></div>
           </div>
         </div>
       </div>

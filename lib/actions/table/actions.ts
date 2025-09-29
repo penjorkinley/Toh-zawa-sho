@@ -226,8 +226,6 @@ export async function generateTableQRCode(
       return { success: false, error: "Table not found" };
     }
 
-    const restaurantName = table.business_information?.business_name;
-
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const menuUrl = `${baseUrl}/menu/${businessId}/${tableId}`;
 
@@ -373,20 +371,34 @@ export async function getPublicMenuData(
       .select(
         `
         id,
+        user_id,
         business_type,
         location,
         description,
         logo_url,
-        cover_photo_url,
-        user_profiles!inner(business_name)
+        cover_photo_url
       `
       )
       .eq("id", businessId)
       .single();
 
     if (businessError || !businessData) {
+      console.error("Business data fetch error:", businessError);
       return { success: false, error: "Restaurant not found" };
     }
+
+    // Get business name from user_profiles using the user_id
+    const { data: userProfileData, error: profileError } = await supabase
+      .from("user_profiles")
+      .select("business_name")
+      .eq("id", businessData.user_id)
+      .single();
+
+    if (profileError || !userProfileData) {
+      console.error("User profile fetch error:", profileError);
+    }
+
+    const businessName = userProfileData?.business_name || "Restaurant";
 
     // Get table info
     const { data: tableData, error: tableError } = await supabase
@@ -489,8 +501,7 @@ export async function getPublicMenuData(
     const publicMenuData: PublicMenuData = {
       restaurant: {
         id: businessData.id,
-        business_name:
-          businessData.user_profiles?.[0]?.business_name || "Restaurant",
+        business_name: businessName,
         business_type: businessData.business_type,
         location: businessData.location,
         description: businessData.description,

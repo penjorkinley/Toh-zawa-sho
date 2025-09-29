@@ -4,10 +4,8 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import MenuItemCard from "@/components/customer-menu/MenuItemCard";
 import MenuItemModal from "@/components/customer-menu/MenuItemModal";
-import Image from "next/image";
 import { MenuItem } from "@/lib/types/menu";
 import { PublicMenuData } from "@/lib/types/table-management";
 import { transformDatabaseToCustomerMenu } from "@/lib/utils/menu-transform";
@@ -51,33 +49,32 @@ export default function CustomerMenuClient({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header - Enhanced with table info */}
+      {/* Header - Redesigned */}
       <div className="bg-white shadow-sm sticky top-0 z-40">
-        <div className="px-4 py-4">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="relative w-12 h-12">
-              <Image
-                src={restaurant.logo}
-                alt={restaurant.name}
-                fill
-                className="object-contain"
-              />
+        <div className="px-4 py-5">
+          {/* Top section with circular table number and welcome message */}
+          <div className="flex items-center gap-4 mb-4">
+            <div className="flex items-center justify-center w-16 h-16 bg-primary rounded-full shadow-lg">
+              <div className="text-center">
+                <div className="text-xs font-medium text-white opacity-90">
+                  TABLE
+                </div>
+                <div className="text-lg font-bold text-white">
+                  {menuData.table.table_number}
+                </div>
+              </div>
             </div>
             <div className="flex-1">
-              <h1 className="text-lg font-semibold text-gray-800">
-                {restaurant.greeting}
+              <h1 className="text-xl font-bold text-gray-900">
+                Kuzu! Welcome to
               </h1>
-              {/* Show restaurant name and table info */}
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-sm text-gray-600">{restaurant.name}</span>
-                <Badge variant="outline" className="text-xs">
-                  Table {menuData.table.table_number}
-                </Badge>
-              </div>
+              <p className="text-lg font-semibold text-primary">
+                {restaurant.name}
+              </p>
             </div>
           </div>
 
-          {/* Search Bar with border */}
+          {/* Search Bar */}
           <div className="relative">
             <Search
               className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${
@@ -91,7 +88,7 @@ export default function CustomerMenuClient({
               onChange={(e) => setSearchTerm(e.target.value)}
               onFocus={() => setIsSearchFocused(true)}
               onBlur={() => setIsSearchFocused(false)}
-              className="pl-10 bg-gray-50 border border-gray-300 rounded-full h-10 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              className="pl-10 bg-gray-50 border border-gray-300 rounded-full h-11 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
         </div>
@@ -100,18 +97,17 @@ export default function CustomerMenuClient({
         <div className="overflow-x-auto">
           <div className="flex gap-2 px-4 pb-4 min-w-max">
             {categories.map((category) => (
-              <Badge
+              <button
                 key={category.id}
-                variant="outline"
-                className={`whitespace-nowrap cursor-pointer px-4 py-2 rounded-full transition-colors border-primary text-primary ${
+                className={`whitespace-nowrap cursor-pointer px-4 py-2 rounded-full transition-colors border border-primary text-sm font-medium ${
                   activeCategory === category.id
                     ? "bg-primary text-white"
-                    : "bg-transparent hover:bg-primary/5"
+                    : "bg-transparent text-primary hover:bg-primary/5"
                 }`}
                 onClick={() => setActiveCategory(category.id)}
               >
                 {category.name}
-              </Badge>
+              </button>
             ))}
           </div>
         </div>
@@ -153,14 +149,15 @@ export default function CustomerMenuClient({
         onClose={handleCloseModal}
       />
 
-      {/* Footer */}
-      <div className="bg-white border-t border-gray-200 py-4 mt-8">
-        <div className="px-4 text-center">
-          <p className="text-gray-600 text-sm">Thank you for dining with us!</p>
-          <p className="text-gray-500 text-xs mt-1">
-            Table {menuData.table.table_number} •{" "}
-            {menuData.restaurant.business_name}
-          </p>
+      {/* Footer - Simplified */}
+      <div className="bg-white border-t border-gray-200 mt-8">
+        <div className="px-4 py-6">
+          <div className="text-center space-y-2">
+            <p className="text-primary font-medium">
+              Thank you for dining with us!
+            </p>
+            <p className="text-gray-600 font-medium">Do visit us again</p>
+          </div>
         </div>
       </div>
     </div>

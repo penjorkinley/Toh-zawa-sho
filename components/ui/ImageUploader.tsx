@@ -4,6 +4,8 @@ import { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import { Camera, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/shadcn-button";
+import { autoCompressImage } from "@/lib/utils/image-compression";
+import { validateImageFile } from "@/lib/utils/upload-with-compression";
 
 interface ImageUploaderProps {
   coverPhoto: File | null;
@@ -59,59 +61,75 @@ export default function ImageUploader({
     };
   }, []);
 
-  const handleCoverPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCoverPhotoChange = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
 
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert("File size must be less than 5MB");
+      // Validate file
+      const validation = validateImageFile(file);
+      if (!validation.valid) {
+        alert(validation.error);
         return;
       }
 
-      // Validate file type
-      if (!file.type.startsWith("image/")) {
-        alert("Please select an image file");
-        return;
-      }
+      try {
+        // Compress if needed
+        const compressedFile = await autoCompressImage(file, {
+          maxSizeKB: 800, // For cover photos, slightly smaller target
+          maxWidth: 1920,
+          maxHeight: 1080,
+        });
 
-      // Revoke previous URL if it was created locally
-      if (coverPreviewUrl && locallyCreatedUrls.current.cover) {
-        URL.revokeObjectURL(coverPreviewUrl);
-      }
+        // Revoke previous URL if it was created locally
+        if (coverPreviewUrl && locallyCreatedUrls.current.cover) {
+          URL.revokeObjectURL(coverPreviewUrl);
+        }
 
-      const imageUrl = URL.createObjectURL(file);
-      setCoverPreviewUrl(imageUrl);
-      locallyCreatedUrls.current.cover = true;
-      onCoverPhotoChange(file);
+        const imageUrl = URL.createObjectURL(compressedFile);
+        setCoverPreviewUrl(imageUrl);
+        locallyCreatedUrls.current.cover = true;
+        onCoverPhotoChange(compressedFile);
+      } catch (error) {
+        console.error("Error processing cover photo:", error);
+        alert("Error processing image. Please try again.");
+      }
     }
   };
 
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
 
-      // Validate file size (max 2MB for logo)
-      if (file.size > 2 * 1024 * 1024) {
-        alert("Logo file size must be less than 2MB");
+      // Validate file
+      const validation = validateImageFile(file);
+      if (!validation.valid) {
+        alert(validation.error);
         return;
       }
 
-      // Validate file type
-      if (!file.type.startsWith("image/")) {
-        alert("Please select an image file");
-        return;
-      }
+      try {
+        // Compress if needed (logos should be smaller)
+        const compressedFile = await autoCompressImage(file, {
+          maxSizeKB: 500, // Smaller target for logos
+          maxWidth: 800,
+          maxHeight: 800,
+        });
 
-      // Revoke previous URL if it was created locally
-      if (logoPreviewUrl && locallyCreatedUrls.current.logo) {
-        URL.revokeObjectURL(logoPreviewUrl);
-      }
+        // Revoke previous URL if it was created locally
+        if (logoPreviewUrl && locallyCreatedUrls.current.logo) {
+          URL.revokeObjectURL(logoPreviewUrl);
+        }
 
-      const imageUrl = URL.createObjectURL(file);
-      setLogoPreviewUrl(imageUrl);
-      locallyCreatedUrls.current.logo = true;
-      onLogoChange(file);
+        const imageUrl = URL.createObjectURL(compressedFile);
+        setLogoPreviewUrl(imageUrl);
+        locallyCreatedUrls.current.logo = true;
+        onLogoChange(compressedFile);
+      } catch (error) {
+        console.error("Error processing logo:", error);
+        alert("Error processing image. Please try again.");
+      }
     }
   };
 

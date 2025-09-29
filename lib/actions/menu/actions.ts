@@ -324,7 +324,7 @@ export async function createMenuItem(data: CreateMenuItemDTO): Promise<{
         category_id: data.category_id,
         name: data.name,
         description: data.description,
-        image_url: data.image_url || "/default-food-img.jpg", // Use provided image or default
+        image_url: data.image_url || "/default-food-img.png", // Use provided image or default
         is_vegetarian:
           data.is_vegetarian !== undefined ? data.is_vegetarian : null, // Handle null for "no preference"
         display_order: data.display_order || 0,

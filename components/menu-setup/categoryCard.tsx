@@ -38,6 +38,7 @@ import {
   uploadMenuItemImage,
   updateMenuItem,
 } from "@/lib/actions/menu/actions";
+import { uploadImageWithCompression } from "@/lib/utils/upload-with-compression";
 
 // Database menu item interface (with sizes) - matches parent component type
 interface DatabaseMenuItem {
@@ -134,7 +135,7 @@ function MenuItemForm({
   // Image handling
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string>(
-    editItem?.image_url || "/default-food-img.jpg"
+    editItem?.image_url || "/default-food-img.png"
   );
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
@@ -158,7 +159,7 @@ function MenuItemForm({
             }))
           : [{ size_name: "", price: "" }]
       );
-      setImagePreviewUrl(editItem.image_url || "/default-food-img.jpg");
+      setImagePreviewUrl(editItem.image_url || "/default-food-img.png");
     }
   }, [editItem]);
 
@@ -230,7 +231,10 @@ function MenuItemForm({
       // Upload new image if selected
       if (selectedImageFile) {
         setIsUploadingImage(true);
-        const uploadResult = await uploadMenuItemImage(selectedImageFile);
+        const uploadResult = await uploadImageWithCompression(
+          selectedImageFile,
+          uploadMenuItemImage
+        );
         if (uploadResult.success && uploadResult.url) {
           finalImageUrl = uploadResult.url;
         } else {
@@ -845,7 +849,7 @@ export default function CategoryCard({
                   {/* Item Image */}
                   <div className="relative w-12 h-12 rounded-md overflow-hidden flex-shrink-0">
                     <Image
-                      src={item.image_url || "/default-food-img.jpg"}
+                      src={item.image_url || "/default-food-img.png"}
                       alt={item.name}
                       fill
                       className="object-cover"

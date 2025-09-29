@@ -32,6 +32,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { uploadMenuItemImage } from "@/lib/actions/menu/actions";
+import { uploadImageWithCompression } from "@/lib/utils/upload-with-compression";
 
 interface SelectedCategory {
   template: CategoryTemplate;
@@ -126,11 +127,11 @@ export default function ItemTemplateSelector({
       );
     } else {
       // Add item
-      let imageUrl = item.image || "/default-food-img.jpg";
+      let imageUrl = item.image || "/default-food-img.png";
 
       // If it's not already a GitHub URL and not the default image
       if (
-        imageUrl !== "/default-food-img.jpg" &&
+        imageUrl !== "/default-food-img.png" &&
         !imageUrl.startsWith("https://raw.githubusercontent.com/")
       ) {
         try {
@@ -140,7 +141,10 @@ export default function ItemTemplateSelector({
             type: "image/jpeg",
           });
 
-          const uploadResult = await uploadMenuItemImage(file);
+          const uploadResult = await uploadImageWithCompression(
+            file,
+            uploadMenuItemImage
+          );
           if (uploadResult.success && uploadResult.url) {
             imageUrl = uploadResult.url;
           } else {
@@ -148,11 +152,11 @@ export default function ItemTemplateSelector({
               "Failed to upload template item image:",
               uploadResult.error
             );
-            imageUrl = "/default-food-img.jpg";
+            imageUrl = "/default-food-img.png";
           }
         } catch (error) {
           console.error("Error processing template item image:", error);
-          imageUrl = "/default-food-img.jpg";
+          imageUrl = "/default-food-img.png";
         }
       }
 
@@ -211,12 +215,15 @@ export default function ItemTemplateSelector({
     try {
       setAddingCustomItem(categoryId); // Start loading
 
-      let imageUrl = "/default-food-img.jpg";
+      let imageUrl = "/default-food-img.png";
       const imageFile = customItemImages[categoryId];
 
       if (imageFile) {
         // Upload image to GitHub
-        const uploadResult = await uploadMenuItemImage(imageFile);
+        const uploadResult = await uploadImageWithCompression(
+          imageFile,
+          uploadMenuItemImage
+        );
         if (uploadResult.success && uploadResult.url) {
           imageUrl = uploadResult.url;
         } else {
@@ -417,7 +424,7 @@ export default function ItemTemplateSelector({
                           >
                             <div className="flex items-start gap-3">
                               <Image
-                                src={item.image || "/default-food-img.jpg"}
+                                src={item.image || "/default-food-img.png"}
                                 alt={item.name}
                                 width={48}
                                 height={48}
@@ -492,7 +499,7 @@ export default function ItemTemplateSelector({
                           >
                             <div className="flex items-center gap-3">
                               <Image
-                                src={item.image || "/default-food-img.jpg"}
+                                src={item.image || "/default-food-img.png"}
                                 alt={item.name}
                                 width={40}
                                 height={40}

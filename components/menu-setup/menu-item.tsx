@@ -159,7 +159,7 @@ export function MenuItemCard({
                   <Equal className="w-5 h-5 text-muted-foreground" />
                   <div className="w-10 h-10 rounded-md overflow-hidden flex-shrink-0">
                     <Image
-                      src={selectedImage || "/default-food-img.jpg"}
+                      src={selectedImage || "/default-food-img.png"}
                       alt="menu item"
                       width={40}
                       height={40}

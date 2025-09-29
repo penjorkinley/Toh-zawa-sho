@@ -85,6 +85,13 @@ export default function MenuSetupPage() {
     }>
   >([]);
 
+  // Function to handle step navigation with scroll to top
+  const navigateToStep = (step: "template" | "items" | "review" | "manage") => {
+    setCurrentStep(step);
+    // Scroll to top of the page smoothly
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   // Check menu setup status on component mount
   React.useEffect(() => {
     async function checkSetupStatus() {
@@ -157,7 +164,7 @@ export default function MenuSetupPage() {
       })
     );
     setSelectedCategories(newSelectedCategories);
-    setCurrentStep("items");
+    navigateToStep("items");
   };
 
   const handleItemSelection = (
@@ -304,7 +311,7 @@ export default function MenuSetupPage() {
         setManualCategories(convertedCategories);
 
         // Update state flags
-        setCurrentStep("manage");
+        navigateToStep("manage");
         setIsQuickSetup(false);
         setIsMenuAlreadySetup(true);
 
@@ -528,7 +535,7 @@ export default function MenuSetupPage() {
     }
 
     setIsQuickSetup(true);
-    setCurrentStep("template");
+    navigateToStep("template");
     setSelectedCategories([]);
   };
 
@@ -680,15 +687,15 @@ export default function MenuSetupPage() {
           <ItemTemplateSelector
             selectedCategories={selectedCategories}
             onItemSelection={handleItemSelection}
-            onNext={() => setCurrentStep("review")}
-            onBack={() => setCurrentStep("template")}
+            onNext={() => navigateToStep("review")}
+            onBack={() => navigateToStep("template")}
           />
         )}
 
         {currentStep === "review" && (
           <MenuReview
             selectedCategories={selectedCategories}
-            onBack={() => setCurrentStep("items")}
+            onBack={() => navigateToStep("items")}
             onFinish={handleFinishSetup}
             onUpdateCategory={handleUpdateCategory}
             isLoading={isSaving}
@@ -703,7 +710,7 @@ export default function MenuSetupPage() {
             variant="ghost"
             onClick={() => {
               setIsQuickSetup(false);
-              setCurrentStep("manage");
+              navigateToStep("manage");
             }}
           >
             Skip and manage manually

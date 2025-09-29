@@ -8,8 +8,8 @@ export async function processMenuItemImage(
   itemName: string
 ): Promise<string> {
   // If no image or using default image, return default
-  if (!imageUrl || imageUrl === "/default-food-img.jpg") {
-    return "/default-food-img.jpg";
+  if (!imageUrl || imageUrl === "/default-food-img.png") {
+    return "/default-food-img.png";
   }
 
   try {
@@ -33,9 +33,9 @@ export async function processMenuItemImage(
 
     // If upload fails, use default image
     console.error("Failed to upload image:", result.error);
-    return "/default-food-img.jpg";
+    return "/default-food-img.png";
   } catch (error) {
     console.error("Error processing menu item image:", error);
-    return "/default-food-img.jpg";
+    return "/default-food-img.png";
   }
 }

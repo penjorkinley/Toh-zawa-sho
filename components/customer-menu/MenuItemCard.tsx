@@ -43,7 +43,7 @@ export default function MenuItemCard({ item, onClick }: MenuItemCardProps) {
         <div className="relative h-32 bg-gray-200">
           {!imageError ? (
             <Image
-              src={item.image || "/default-food-img.jpg"}
+              src={item.image || "/default-food-img.png"}
               alt={item.name}
               fill
               className={`object-cover transition-opacity duration-300 ${
@@ -111,13 +111,19 @@ export default function MenuItemCard({ item, onClick }: MenuItemCardProps) {
             {item.description}
           </p>
           <div className="flex items-center justify-between">
-            <span className="font-bold text-primary text-sm">
-              {priceDisplay}
-            </span>
-            {item.sizes && item.sizes.length > 1 && (
-              <Badge variant="secondary" className="text-xs">
-                Multiple sizes
-              </Badge>
+            {item.sizes && item.sizes.length > 1 ? (
+              <div className="flex flex-col">
+                <span className="font-bold text-primary text-sm">
+                  From Nu. {minPrice}
+                </span>
+                <span className="text-xs text-gray-500">
+                  {item.sizes.length} sizes available
+                </span>
+              </div>
+            ) : (
+              <span className="font-bold text-primary text-sm">
+                {priceDisplay}
+              </span>
             )}
           </div>
         </div>

@@ -51,7 +51,7 @@ export function transformDatabaseToCustomerMenu(menuData: PublicMenuData): {
         description: item.description || "",
         price,
         sizes,
-        image: item.image_url || "/default-food-img.jpg",
+        image: item.image_url || "/default-food-img.png",
         isVeg: item.is_vegetarian,
         category: category.id,
       };
