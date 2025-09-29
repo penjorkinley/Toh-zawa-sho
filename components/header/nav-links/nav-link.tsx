@@ -17,7 +17,8 @@ export default function NavLink({
   onClick,
 }: Props) {
   const path = usePathname();
-  const isActive = path.startsWith(href);
+  // Fix active state logic - exact match for home, startsWith for others
+  const isActive = href === "/" ? path === "/" : path.startsWith(href);
 
   // Base styles for all links
   const baseClasses =

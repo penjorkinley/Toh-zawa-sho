@@ -17,6 +17,10 @@ export default function NavLinks({
         orientation === "horizontal" ? "flex-row items-center" : "flex-col"
       } gap-4 ${className}`}
     >
+      <NavLink href="/" onClick={onLinkClick}>
+        Home
+      </NavLink>
+
       <NavLink href="/about" onClick={onLinkClick}>
         About
       </NavLink>

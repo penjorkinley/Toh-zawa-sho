@@ -3,25 +3,30 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/shadcn-button";
+import { CheckCircle } from "lucide-react";
 
 export default function LandingPage() {
-  // Feature items for the right column
-  const features = [
+  // Key features for the right column
+  const keyFeatures = [
     {
       icon: "/icons/qr-code.svg",
-      title: "Contactless & Convenient",
-    },
-    {
-      icon: "/icons/mobile-order.svg",
-      title: "Faster & Error-Free Ordering",
+      title: "QR Code Menu Access",
+      subtitle: "Customers scan to view menu",
     },
     {
       icon: "/icons/menu.svg",
       title: "Easy Menu Management",
+      subtitle: "Add, edit, remove menu items",
+    },
+    {
+      icon: "/icons/mobile-order.svg",
+      title: "Instant Updates",
+      subtitle: "Change prices immediately",
     },
     {
       icon: "/icons/satisfaction.svg",
-      title: "Increased Customer Satisfaction",
+      title: "Beautiful Food Photos",
+      subtitle: "Show dishes with images",
     },
   ];
 
@@ -29,15 +34,37 @@ export default function LandingPage() {
     <main className="min-h-screen w-full flex flex-col px-6 sm:px-8 lg:px-12 pt-4 sm:pt-0">
       <div className="container mx-auto pt-[50px] md:pt-[120px] flex-1 flex flex-col justify-center">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center my-8">
-          {/* Left column - Text content */}
+          {/* Left column - Enhanced text content */}
           <div className="lg:col-span-4">
             <h1 className="text-4xl md:text-5xl font-bold text-[#CD8B65] leading-tight mb-6">
-              Revolutionizing Restaurant Dining with Digital Menus!
+              End Paper Menu Problems Forever!
             </h1>
-            <p className="text-gray-600 mb-8">
-              A smart, contactless menu and ordering system designed for
-              efficiency and better customer experience.
+            <p className="text-gray-600 mb-6 text-lg">
+              Transform your restaurant with our digital QR menu system. No more
+              reprinting, no more deteriorated menus, no more waiting.
             </p>
+
+            {/* Problem solution highlights */}
+            <div className="space-y-3 mb-8">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                <span className="text-gray-700">
+                  Restaurant owners easily manage their menus
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                <span className="text-gray-700">
+                  Print QR codes once, they work forever
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                <span className="text-gray-700">
+                  Customers see beautiful menus with food photos
+                </span>
+              </div>
+            </div>
           </div>
 
           {/* Middle column - Illustration */}
@@ -53,9 +80,9 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Right column - Feature icons */}
+          {/* Right column - Key features */}
           <div className="lg:col-span-3 space-y-6">
-            {features.map((feature, index) => (
+            {keyFeatures.map((feature, index) => (
               <div key={index} className="flex items-center gap-4">
                 <Image
                   src={feature.icon}
@@ -63,13 +90,18 @@ export default function LandingPage() {
                   width={48}
                   height={48}
                 />
-                <span className="font-medium">{feature.title}</span>
+                <div>
+                  <div className="font-medium">{feature.title}</div>
+                  <div className="text-sm text-gray-500">
+                    {feature.subtitle}
+                  </div>
+                </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Join Us button - centered below the grid */}
+        {/* Join Us button - centered below everything */}
         <div className="w-full flex justify-center items-center mt-20 mb-8 sm:mb-0">
           <Link
             href="/signup"

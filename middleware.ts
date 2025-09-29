@@ -6,6 +6,9 @@ import { NextResponse } from "next/server";
 // Routes that don't require authentication
 const publicRoutes = [
   "/",
+  "/about",
+  "/restaurants",
+  "/contact",
   "/login",
   "/signup",
   "/forgot-password",
