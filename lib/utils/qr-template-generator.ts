@@ -21,7 +21,7 @@ export function generateQRCodeTemplate(data: QRTemplateData): Promise<string> {
 
       // Set canvas dimensions (A6 size ratio - good for printing)
       const width = 600;
-      const height = 800;
+      const height = 850;
       canvas.width = width;
       canvas.height = height;
 
@@ -96,11 +96,30 @@ export function generateQRCodeTemplate(data: QRTemplateData): Promise<string> {
         ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
 
         // Instructions text
-        const instructionsY = qrY + qrSize + 80;
-        ctx.fillStyle = "#64748b";
-        ctx.font = "20px Arial, sans-serif";
+        const instructionsY = qrY + qrSize + 60;
+        ctx.fillStyle = "#1e293b";
+        ctx.font = "bold 22px Arial, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("Scan to view our menu", width / 2, instructionsY);
+        ctx.fillText("How to scan:", width / 2, instructionsY);
+
+        // Step-by-step instructions
+        ctx.fillStyle = "#475569";
+        ctx.font = "18px Arial, sans-serif";
+        ctx.fillText(
+          "1. Open your phone's Camera app",
+          width / 2,
+          instructionsY + 35
+        );
+        ctx.fillText(
+          "2. Point camera at QR code",
+          width / 2,
+          instructionsY + 60
+        );
+        ctx.fillText(
+          "3. Tap the link that appears",
+          width / 2,
+          instructionsY + 85
+        );
 
         // Footer section
         const footerY = height - 100;

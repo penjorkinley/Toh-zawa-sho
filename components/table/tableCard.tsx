@@ -104,6 +104,13 @@ export default function TableCard({
   const handleDelete = () => {
     if (!table) return;
 
+    // Show confirmation dialog
+    const confirmed = confirm(
+      `Are you sure you want to delete Table ${table.table_number}? This action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
     startTransition(async () => {
       try {
         const result = await deleteTable(table.id);

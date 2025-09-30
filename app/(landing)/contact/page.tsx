@@ -62,13 +62,13 @@ export default function ContactPage() {
 
   return (
     <main className="min-h-screen w-full flex flex-col px-6 sm:px-8 lg:px-12 pt-4">
-      <div className="container mx-auto pt-[50px] md:pt-[120px] pb-12">
+      <div className="container mx-auto pt-[100px] md:pt-[110px] lg:pt-[120px] pb-12">
         {/* Hero Section */}
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl font-bold text-[#CD8B65] leading-tight mb-6">
             Get in Touch
           </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8 leading-relaxed">
             Have questions about our digital menu system? Want to see a demo?
             We're here to help you modernize your restaurant.
           </p>
@@ -112,10 +112,10 @@ export default function ContactPage() {
             <div className="inline-flex items-center justify-center w-16 h-16 bg-[#CD8B65]/10 rounded-full mb-4">
               <HelpCircle className="h-8 w-8 text-[#CD8B65]" />
             </div>
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+            <h2 className="text-4xl font-bold text-gray-900 mb-6 leading-relaxed">
               Frequently Asked <span className="text-[#CD8B65]">Questions</span>
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
               Quick answers to common questions about our digital menu system
             </p>
           </div>
@@ -136,7 +136,7 @@ export default function ContactPage() {
                   {/* Accordion Header */}
                   <button
                     onClick={() => setOpenIndex(isOpen ? -1 : index)}
-                    className="w-full p-6 flex items-center justify-between gap-4 text-left"
+                    className="w-full p-4 md:p-6 flex items-center justify-between gap-4 text-left"
                   >
                     <div className="flex items-center gap-4 flex-1">
                       {/* Question Number Badge */}
@@ -153,7 +153,7 @@ export default function ContactPage() {
                       {/* Question */}
                       <div className="flex-1">
                         <h3
-                          className={`text-lg font-bold transition-colors duration-300 ${
+                          className={`text-base md:text-lg font-bold leading-relaxed transition-colors duration-300 ${
                             isOpen ? "text-[#CD8B65]" : "text-gray-900"
                           }`}
                         >
@@ -176,8 +176,8 @@ export default function ContactPage() {
                       isOpen ? "max-h-96" : "max-h-0"
                     }`}
                   >
-                    <div className="px-6 pb-6 pt-2">
-                      <div className="pl-14">
+                    <div className="px-4 md:px-6 pb-4 md:pb-6 pt-2">
+                      <div className="pl-10 md:pl-14">
                         <div className="h-px w-full bg-gradient-to-r from-[#CD8B65]/30 to-transparent mb-4"></div>
                         <p className="text-gray-600 text-base leading-relaxed">
                           {faq.answer}
@@ -193,8 +193,10 @@ export default function ContactPage() {
 
         {/* Call to Action */}
         <div className="bg-gradient-to-r from-[#CD8B65] to-[#CD8B65]/80 rounded-2xl p-8 md:p-12 text-center text-white">
-          <h2 className="text-3xl font-bold mb-4">Still Have Questions?</h2>
-          <p className="text-xl opacity-90">
+          <h2 className="text-4xl font-bold mb-6 leading-relaxed">
+            Still Have Questions?
+          </h2>
+          <p className="text-xl opacity-90 leading-relaxed">
             We're here to help you transform your restaurant with our digital
             menu solution. Get in touch with our team for personalized support,
             demos, or any questions about getting started.

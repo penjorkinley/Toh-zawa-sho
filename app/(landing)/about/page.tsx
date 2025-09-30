@@ -100,7 +100,7 @@ export default function AboutPage() {
 
   return (
     <main className="min-h-screen w-full flex flex-col px-6 sm:px-8 lg:px-12 pt-4">
-      <div className="container mx-auto pt-[50px] md:pt-[100px] pb-12">
+      <div className="container mx-auto pt-[100px] md:pt-[110px] lg:pt-[120px] pb-12">
         {/* Hero Section */}
         <div className="text-center mb-8">
           <h1 className="text-4xl md:text-5xl font-bold text-[#CD8B65] leading-tight mb-6">
@@ -117,7 +117,7 @@ export default function AboutPage() {
         <div className="bg-gradient-to-r from-[#CD8B65]/10 to-[#CD8B65]/5 rounded-2xl p-8 md:p-12 mb-16">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
             <div>
-              <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center justify-center gap-3 mb-6">
                 <Target className="h-8 w-8 text-[#CD8B65]" />
                 <h2 className="text-3xl font-bold text-gray-900">
                   Our Mission
@@ -166,7 +166,7 @@ export default function AboutPage() {
             <h2 className="text-4xl font-bold text-gray-900 mb-6">
               Problems We <span className="text-[#CD8B65]">Solve</span>
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto">
               Traditional restaurant menus create multiple challenges. Here's
               the problem, and how we solve it with our complete digital
               solution:
@@ -190,19 +190,19 @@ export default function AboutPage() {
                   {/* Accordion Header */}
                   <button
                     onClick={() => setOpenIndex(isOpen ? -1 : index)}
-                    className="w-full p-6 flex items-center justify-between gap-4 text-left"
+                    className="w-full p-4 md:p-6 flex items-center justify-between gap-4 text-left"
                   >
                     <div className="flex items-center gap-4 flex-1">
                       {/* Icon */}
                       <div
-                        className={`flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-300 ${
+                        className={`flex-shrink-0 w-12 h-12 md:w-14 md:h-14 rounded-xl flex items-center justify-center transition-all duration-300 ${
                           isOpen
                             ? "bg-[#CD8B65] shadow-lg scale-110"
                             : "bg-[#F8F6EE] border border-[#CD8B65]/20"
                         }`}
                       >
                         <IconComponent
-                          className={`h-7 w-7 transition-colors duration-300 ${
+                          className={`h-6 w-6 md:h-7 md:w-7 transition-colors duration-300 ${
                             isOpen ? "text-white" : "text-[#CD8B65]"
                           }`}
                         />
@@ -211,7 +211,7 @@ export default function AboutPage() {
                       {/* Title */}
                       <div className="flex-1">
                         <h3
-                          className={`text-xl font-bold transition-colors duration-300 ${
+                          className={`text-base md:text-lg font-bold transition-colors duration-300 ${
                             isOpen ? "text-[#CD8B65]" : "text-gray-900"
                           }`}
                         >
@@ -231,11 +231,11 @@ export default function AboutPage() {
                   {/* Accordion Content */}
                   <div
                     className={`overflow-hidden transition-all duration-300 ${
-                      isOpen ? "max-h-[600px]" : "max-h-0"
+                      isOpen ? "max-h-[800px]" : "max-h-0"
                     }`}
                   >
-                    <div className="px-6 pb-6 pt-2">
-                      <div className="pl-[72px]">
+                    <div className="px-4 md:px-6 pb-4 md:pb-6 pt-2">
+                      <div className="pl-12 md:pl-[72px]">
                         {/* Problem Section */}
                         <div className="mb-6">
                           <div className="inline-block px-3 py-1 bg-red-50 text-red-500 text-sm font-semibold rounded-full mb-3">
@@ -253,7 +253,7 @@ export default function AboutPage() {
                           <div className="inline-block px-3 py-1 bg-green-50 text-green-600 text-sm font-semibold rounded-full mb-3">
                             OUR SOLUTION
                           </div>
-                          <h4 className="text-lg font-bold text-[#CD8B65] mb-3">
+                          <h4 className="text-base md:text-lg font-bold text-[#CD8B65] mb-3">
                             {item.solutionTitle}
                           </h4>
                           <p className="text-gray-600 text-base leading-relaxed mb-4">

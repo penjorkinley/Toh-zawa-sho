@@ -103,7 +103,7 @@ export default function RestaurantsPage() {
 
   return (
     <main className="min-h-screen w-full flex flex-col px-6 sm:px-8 lg:px-12 pt-4">
-      <div className="container mx-auto pt-[50px] md:pt-[120px] pb-12">
+      <div className="container mx-auto pt-[100px] md:pt-[110px] lg:pt-[120px] pb-12">
         {/* Hero Section */}
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl font-bold text-[#CD8B65] leading-tight mb-6">
@@ -156,7 +156,7 @@ export default function RestaurantsPage() {
         <div className="bg-[#F8F6EE] rounded-2xl p-8 md:p-12 mb-16">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
             <div>
-              <h2 className="text-3xl font-bold text-[#CD8B65] mb-6">
+              <h2 className="text-4xl font-bold text-[#CD8B65] mb-6">
                 Tired of These Common Problems?
               </h2>
               <ul className="space-y-4">
@@ -215,7 +215,7 @@ export default function RestaurantsPage() {
 
         {/* Call to Action */}
         <div className="bg-gradient-to-r from-[#CD8B65] to-[#CD8B65]/80 rounded-2xl p-8 md:p-12 text-center text-white">
-          <h2 className="text-3xl font-bold mb-4">
+          <h2 className="text-4xl font-bold mb-4">
             Ready to Transform Your Restaurant Menu?
           </h2>
           <p className="text-xl mb-8 opacity-90">
