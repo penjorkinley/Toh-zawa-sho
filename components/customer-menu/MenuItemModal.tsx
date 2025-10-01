@@ -68,7 +68,7 @@ export default function MenuItemModal({
       />
 
       {/* Modal */}
-      <div className="relative bg-white rounded-3xl mx-auto max-w-md w-full h-[45vh] overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95 duration-200">
+      <div className="relative bg-white rounded-3xl mx-auto max-w-md w-full h-[50 vh] overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95 duration-200">
         {/* Close button */}
         <button
           onClick={onClose}

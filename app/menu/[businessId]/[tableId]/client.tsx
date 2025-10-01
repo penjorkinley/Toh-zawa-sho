@@ -1,8 +1,8 @@
 // app/menu/[businessId]/[tableId]/client.tsx
 "use client";
 
-import { useState } from "react";
-import { Search } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import MenuItemCard from "@/components/customer-menu/MenuItemCard";
 import MenuItemModal from "@/components/customer-menu/MenuItemModal";
@@ -26,6 +26,16 @@ export default function CustomerMenuClient({
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [showScrollHint, setShowScrollHint] = useState(true);
+
+  // Hide scroll hint after 8 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowScrollHint(false);
+    }, 8000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // Filter menu items based on search and category
   const filteredItems = menuItems.filter((item) => {
@@ -93,6 +103,18 @@ export default function CustomerMenuClient({
           </div>
         </div>
 
+        {/* Scroll Hint */}
+        {showScrollHint && categories.length > 3 && (
+          <div className="px-4 pb-2 transition-all duration-500 ease-in-out">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 text-blue-800 text-sm px-4 py-3 rounded-lg flex items-center justify-center gap-2 shadow-sm animate-pulse">
+              <span className="font-medium">
+                💡 Swipe left/right below to see more categories
+              </span>
+              <ChevronRight className="h-4 w-4" />
+            </div>
+          </div>
+        )}
+
         {/* Category Filters - Horizontally Scrollable */}
         <div className="overflow-x-auto">
           <div className="flex gap-2 px-4 pb-4 min-w-max">
@@ -152,11 +174,17 @@ export default function CustomerMenuClient({
       {/* Footer - Simplified */}
       <div className="bg-white border-t border-gray-200 mt-8">
         <div className="px-4 py-6">
-          <div className="text-center space-y-2">
+          <div className="text-center space-y-3">
             <p className="text-primary font-medium">
               Thank you for dining with us!
             </p>
             <p className="text-gray-600 font-medium">Do visit us again</p>
+
+            {/* Product and Company Info */}
+            <div className="pt-4 border-t border-gray-100 space-y-1">
+              <p className="text-primary font-medium text-sm">Toh Zawa Sho</p>
+              <p className="text-gray-500 text-xs">Powered by NabaTech</p>
+            </div>
           </div>
         </div>
       </div>

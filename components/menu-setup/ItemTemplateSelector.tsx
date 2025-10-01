@@ -313,6 +313,10 @@ export default function ItemTemplateSelector({
           <p className="text-muted-foreground">
             Choose items for each category and add custom ones if needed
           </p>
+          <p className="text-sm text-blue-600 mt-1">
+            💡 Don't worry about perfection - you can edit, customize, and
+            modify all items on the next page!
+          </p>
         </div>
         {totalSelectedItems > 0 && (
           <Badge variant="secondary" className="px-3 py-1">
